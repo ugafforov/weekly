@@ -51,7 +51,8 @@ function mergedValue(sheet: XLSX.WorkSheet, row: number, col: number): unknown {
 export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
   const bytes = await file.arrayBuffer();
   const book = XLSX.read(bytes, { type: "array", cellStyles: true, cellDates: true });
-  const activeIndex = Math.max(0, Number(book.Workbook?.Views?.[0]?.activeTab ?? 0));
+  const workbookView = book.Workbook?.Views?.[0] as ({ activeTab?: number } | undefined);
+  const activeIndex = Math.max(0, Number(workbookView?.activeTab ?? 0));
   const sheetName = book.SheetNames[activeIndex] ?? book.SheetNames[0];
   if (!sheetName) throw new Error("The workbook does not contain a sheet.");
   const sheet = book.Sheets[sheetName];
