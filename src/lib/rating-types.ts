@@ -25,6 +25,7 @@ export interface RatingStudent {
   status: StudentStatus;
   sheetName: string;
   values: Record<string, string | number>;
+  cellStatuses?: Record<string, StudentStatus>;
 }
 
 export interface RatingWorkbook {
