@@ -99,8 +99,7 @@ function Report({ ref, workbook, activeClass, students, columns, thirdSubject }:
         <tr className="group-row">
           <th rowSpan={2}>№</th>
           <th rowSpan={2} className="name-col">FAMILIYA ISM</th>
-          {isAll && <th rowSpan={2}>SINF</th>}
-          {!isAll && <th rowSpan={2}>SINF</th>}
+          <th rowSpan={2}>SINF</th>
           {groups.map((group, index) => {
             const display = !isAll && index === 2 && thirdSubject ? thirdSubject : group;
             return <th key={group} colSpan={columns.filter((c) => c.group === group).length}>{display}</th>;
