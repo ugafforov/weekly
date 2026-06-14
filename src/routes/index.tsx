@@ -12,7 +12,18 @@ export const Route = createFileRoute("/")({
 });
 
 const classSort = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
-const scoreTone = (score: number) => score >= 8 ? "score-high" : score >= 5 ? "score-mid" : "score-low";
+const totalTone = (score: number) => score >= 8 ? "score-high" : score >= 5 ? "score-mid" : "score-low";
+const percentOf = (v: string | number | undefined) => {
+  if (v === undefined || v === null || v === "") return null;
+  const match = String(v).match(/(-?\d+(?:[.,]\d+)?)/);
+  return match ? parseFloat(match[1].replace(",", ".")) : null;
+};
+const resultTone = (v: string | number | undefined) => {
+  const p = percentOf(v);
+  if (p === null) return "";
+  if (p >= 50) return "score-high";
+  return "score-low";
+};
 const loadWorkbookTools = createClientOnlyFn(() => import("@/lib/rating-workbook.client"));
 
 function RatingDashboard() {
@@ -28,9 +39,7 @@ function RatingDashboard() {
   const activeSheet = students[0]?.sheetName;
   const allColumns = useMemo(() => workbook?.columns.filter((c) => c.sheetName === activeSheet) ?? [], [workbook, activeSheet]);
   const columns = useMemo(
-    () => activeClass === "all"
-      ? allColumns
-      : allColumns.filter((c) => c.role !== "teacher"),
+    () => activeClass === "all" ? allColumns : allColumns.filter((c) => c.role !== "teacher"),
     [activeClass, allColumns],
   );
 
@@ -80,49 +89,77 @@ function UploadScreen({ busy, error, onChoose }: { busy?: string; error: string;
 
 function Report({ ref, workbook, activeClass, students, columns, thirdSubject }: { ref: Ref<HTMLDivElement>; workbook: RatingWorkbook; activeClass: string; students: RatingStudent[]; columns: RatingColumn[]; thirdSubject: string }) {
   const isAll = activeClass === "all";
-  const groups = [...new Set(columns.map((c) => c.group))];
-  // Per-group question count from "TO'G'RI JAVOBLAR" sample values (heuristic): use max numeric label-relevant value? Skip — show group label as-is.
-  return <section ref={ref} className={`print-area overflow-hidden rounded-2xl border border-border bg-card ${isAll ? "" : "telegram-report"}`}>
-    <div className="report-head flex flex-col items-center justify-center gap-3 border-b border-border px-6 py-5">
-      <img src={logo} alt="Al-Xorazmiy School logosi" className="h-14 w-auto object-contain" />
+  const groups = useMemo(() => [...new Set(columns.map((c) => c.group))], [columns]);
+  // For each subject-group, compute "N ta savol" from data: max(rounded(to'g'ri javoblar / (natija/100)))
+  const groupSavol = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const group of groups) {
+      const cols = columns.filter((c) => c.group === group);
+      const javobCol = cols.find((c) => /to[' ʻ‘’`]?g[' ʻ‘’`]?ri.*javob/i.test(c.label));
+      const natijaCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
+      if (!javobCol || !natijaCol) continue;
+      let max = 0;
+      for (const s of students) {
+        const j = percentOf(s.values[javobCol.key]);
+        const n = percentOf(s.values[natijaCol.key]);
+        if (j !== null && n !== null && n > 0) max = Math.max(max, Math.round((j / n) * 100));
+      }
+      if (max > 0 && max <= 50) result[group] = max;
+    }
+    return result;
+  }, [groups, columns, students]);
+
+  return <section ref={ref} className={`print-area overflow-hidden rounded-2xl border border-border bg-card report-shadow ${isAll ? "" : "telegram-report"}`}>
+    <div className="report-head flex flex-col items-center justify-center gap-3 px-6 py-6">
+      <img src={logo} alt="Al-Xorazmiy School" className="h-16 w-auto object-contain" />
       <div className="text-center">
-        <h2 className="font-display text-2xl font-extrabold tracking-tight">HAFTALIK JAMG‘ARILGAN BALLAR</h2>
-        <p className="mt-1 text-sm font-bold text-primary">{isAll ? "BARCHA SINFLAR" : `${activeClass} SINF`} • {workbook.date}</p>
+        <h2 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">HAFTALIK JAMG‘ARILGAN BALLAR</h2>
+        <p className="mt-1 text-sm font-bold text-primary">( {workbook.date} )</p>
       </div>
     </div>
-    {!isAll && <div className="legend flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-card px-6 py-3 text-[11px] font-semibold">
-      <span><i className="dot" style={{ background: "oklch(0.78 0.16 60)" }} /> Ushbu rang o‘quvchi o‘z <b>ID</b> raqamini xato kiritganini bildiradi.</span>
-      <span><i className="dot" style={{ background: "color-mix(in oklab, var(--slate-foreground) 28%, var(--card))" }} /> Ushbu rang o‘quvchi <b>imtihonda qatnashmaganini</b> bildiradi.</span>
+    {!isAll && <div className="legend flex flex-col gap-1.5 border-y border-border bg-card px-6 py-3 text-[12px] font-medium">
+      <span><i className="dot dot-wrong" /> Ushbu rang o‘quvchi o‘z <b>ID</b> raqamini xato kiritganini bildiradi.</span>
+      <span><i className="dot dot-absent" /> Ushbu rang o‘quvchi <b>imtihonda qatnashmaganini</b> bildiradi.</span>
     </div>}
-    <div className="overflow-x-auto"><table className="rating-table w-full border-collapse">
-      <thead>
-        <tr className="group-row">
-          <th rowSpan={2}>№</th>
-          <th rowSpan={2} className="name-col">FAMILIYA ISM</th>
-          <th rowSpan={2}>SINF</th>
-          {groups.map((group, index) => {
-            const display = !isAll && index === 2 && thirdSubject ? thirdSubject : group;
-            return <th key={group} colSpan={columns.filter((c) => c.group === group).length}>{display}</th>;
-          })}
-        </tr>
-        <tr className="label-row">{columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr>
-      </thead>
-      <tbody>{students.map((student, index) => <StudentRow key={`${student.sheetName}-${student.rowNumber}`} student={student} index={index} columns={columns} showClass={true} />)}</tbody>
-    </table></div>
+    <div className={isAll ? "overflow-x-auto" : ""}>
+      <table className="rating-table w-full border-collapse">
+        <thead>
+          <tr className="group-row">
+            <th rowSpan={2} className="col-rank">№</th>
+            <th rowSpan={2} className="name-col">FAMILIYA ISM</th>
+            <th rowSpan={2} className="col-class">SINF</th>
+            {groups.map((group, index) => {
+              const display = !isAll && index === 2 && thirdSubject ? thirdSubject : group;
+              const savol = !isAll ? groupSavol[group] : undefined;
+              return <th key={group} colSpan={columns.filter((c) => c.group === group).length}>
+                <div className="group-title">{display}</div>
+                {savol && <div className="group-sub">({savol} TA SAVOL)</div>}
+              </th>;
+            })}
+          </tr>
+          <tr className="label-row">{columns.map((c) => <th key={c.key}><span className={isAll ? "" : "label-rot"}>{c.label}</span></th>)}</tr>
+        </thead>
+        <tbody>{students.map((student, index) => <StudentRow key={`${student.sheetName}-${student.rowNumber}`} student={student} index={index} columns={columns} />)}</tbody>
+      </table>
+    </div>
   </section>;
 }
 
-function StudentRow({ student, index, columns, showClass }: { student: RatingStudent; index: number; columns: RatingColumn[]; showClass: boolean }) {
-  const rowClass = student.status === "absent" ? "row-absent" : "";
-  return <tr className={rowClass}>
+function StudentRow({ student, index, columns }: { student: RatingStudent; index: number; columns: RatingColumn[] }) {
+  const isAbsent = student.status === "absent";
+  return <tr className={isAbsent ? "row-absent" : ""}>
     <td className="rank">{index + 1}</td>
     <td className="student-name">{student.name}</td>
-    {showClass && <td className="class-col">{student.className}</td>}
+    <td className="class-col">{student.className}</td>
     {columns.map((c) => {
-      const isWrongResult = student.status === "wrong-id" && c.role === "result";
-      const cellClass = student.status === "absent" ? "" : isWrongResult ? "cell-wrong" : c.role === "total" ? scoreTone(student.total) : "";
       const value = student.values[c.key];
-      return <td key={c.key} className={cellClass}>{value === "" || value === undefined ? "—" : value}</td>;
+      let cellClass = "";
+      if (!isAbsent) {
+        if (student.status === "wrong-id" && c.role === "result") cellClass = "cell-wrong";
+        else if (c.role === "total") cellClass = totalTone(student.total);
+        else if (c.role === "result") cellClass = resultTone(value);
+      }
+      return <td key={c.key} className={cellClass}>{value === "" || value === undefined ? (isAbsent ? "" : "—") : value}</td>;
     })}
   </tr>;
 }
