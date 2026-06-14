@@ -73,9 +73,9 @@ function RatingDashboard() {
   );
   const students = useMemo(
     () =>
-      (workbook?.students.filter((s) => activeClass === "all" || s.className === activeClass) ?? []).sort(
-        (a, b) => b.total - a.total,
-      ),
+      (
+        workbook?.students.filter((s) => activeClass === "all" || s.className === activeClass) ?? []
+      ).sort((a, b) => b.total - a.total),
     [workbook, activeClass],
   );
   const activeSheet = students[0]?.sheetName;
@@ -135,7 +135,16 @@ function RatingDashboard() {
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const props = pdf.getImageProperties(image);
       const width = 277;
-      pdf.addImage(image, "PNG", 10, 10, width, Math.min(190, (width * props.height) / props.width), undefined, "FAST");
+      pdf.addImage(
+        image,
+        "PNG",
+        10,
+        10,
+        width,
+        Math.min(190, (width * props.height) / props.width),
+        undefined,
+        "FAST",
+      );
       pdf.save(`${activeClass}-${workbook?.date}-reyting.pdf`);
     } finally {
       setBusy(undefined);
@@ -150,7 +159,9 @@ function RatingDashboard() {
       if (!tools) return;
       const output = tools.createSegmentedWorkbook(workbook, classes);
       const url = URL.createObjectURL(
-        new Blob([output], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        new Blob([output], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
       );
       const link = document.createElement("a");
       link.href = url;
@@ -177,7 +188,13 @@ function RatingDashboard() {
             {workbook ? "Faylni almashtirish" : "Excel yuklash"}
           </Button>
         </div>
-        <input ref={inputRef} className="hidden" type="file" accept=".xlsx,.xls" onChange={upload} />
+        <input
+          ref={inputRef}
+          className="hidden"
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={upload}
+        />
       </header>
       {!workbook ? (
         <UploadScreen busy={busy} error={error} onChoose={() => inputRef.current?.click()} />
@@ -188,7 +205,8 @@ function RatingDashboard() {
               <p className="eyebrow">{workbook.fileName}</p>
               <h1 className="mt-1 font-display text-3xl font-extrabold">Haftalik reyting</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Umumiy jadvalda barcha ma’lumotlar, sinf ko‘rinishida ota-onalar uchun soddalashtirilgan hisobot.
+                Umumiy jadvalda barcha ma’lumotlar, sinf ko‘rinishida ota-onalar uchun
+                soddalashtirilgan hisobot.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -204,20 +222,38 @@ function RatingDashboard() {
                   />
                 </label>
               )}
-              <Button variant="outline" onClick={downloadImage} disabled={Boolean(busy) || activeClass === "all"}>
+              <Button
+                variant="outline"
+                onClick={downloadImage}
+                disabled={Boolean(busy) || activeClass === "all"}
+              >
                 <ImageDown /> Telegram PNG
               </Button>
-              <Button variant="outline" onClick={downloadPdf} disabled={Boolean(busy) || activeClass === "all"}>
+              <Button
+                variant="outline"
+                onClick={downloadPdf}
+                disabled={Boolean(busy) || activeClass === "all"}
+              >
                 <FileDown /> PDF
               </Button>
             </div>
           </div>
-          <nav className="no-print mb-5 flex gap-2 overflow-x-auto border-b border-border pb-3" aria-label="Sinflar">
-            <Button variant={activeClass === "all" ? "premium" : "ghost"} onClick={() => setActiveClass("all")}>
+          <nav
+            className="no-print mb-5 flex gap-2 overflow-x-auto border-b border-border pb-3"
+            aria-label="Sinflar"
+          >
+            <Button
+              variant={activeClass === "all" ? "premium" : "ghost"}
+              onClick={() => setActiveClass("all")}
+            >
               <Users /> Umumiy reyting
             </Button>
             {classes.map((name) => (
-              <Button key={name} variant={activeClass === name ? "premium" : "ghost"} onClick={() => setActiveClass(name)}>
+              <Button
+                key={name}
+                variant={activeClass === name ? "premium" : "ghost"}
+                onClick={() => setActiveClass(name)}
+              >
                 {name}
               </Button>
             ))}
