@@ -166,18 +166,32 @@
     color: var(--color-foreground);
     font-family: var(--font-body);
     background-image:
-      radial-gradient(circle at 8% 0%, color-mix(in oklab, var(--primary) 9%, transparent), transparent 28rem),
-      radial-gradient(circle at 95% 12%, color-mix(in oklab, var(--sage) 22%, transparent), transparent 30rem);
+      radial-gradient(
+        circle at 8% 0%,
+        color-mix(in oklab, var(--primary) 9%, transparent),
+        transparent 28rem
+      ),
+      radial-gradient(
+        circle at 95% 12%,
+        color-mix(in oklab, var(--sage) 22%, transparent),
+        transparent 30rem
+      );
     min-width: 320px;
   }
 
-  button, a, input { outline-color: var(--ring); }
+  button,
+  a,
+  input {
+    outline-color: var(--ring);
+  }
 }
 
 @utility glass-panel {
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 24px 64px -38px color-mix(in oklab, var(--foreground) 28%, transparent), inset 0 1px 0 color-mix(in oklab, white 75%, transparent);
+  box-shadow:
+    0 24px 64px -38px color-mix(in oklab, var(--foreground) 28%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 75%, transparent);
   backdrop-filter: blur(24px) saturate(135%);
 }
 
@@ -186,7 +200,14 @@
 }
 
 @media print {
-  body { background: white; }
-  .no-print { display: none !important; }
-  .print-area { box-shadow: none !important; border: 0 !important; }
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: 0 !important;
+  }
 }

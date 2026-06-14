@@ -17,7 +17,9 @@ export const Route = createFileRoute("/sitemap.xml")({
           `  </url>`,
           `</urlset>`,
         ].join("\n");
-        return new Response(xml, { headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=3600" } });
+        return new Response(xml, {
+          headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=3600" },
+        });
       },
     },
   },
