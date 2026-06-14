@@ -1,5 +1,11 @@
 import * as XLSX from "xlsx-js-style";
-import type { ColumnRole, RatingColumn, RatingStudent, RatingWorkbook, StudentStatus } from "./rating-types";
+import type {
+  ColumnRole,
+  RatingColumn,
+  RatingStudent,
+  RatingWorkbook,
+  StudentStatus,
+} from "./rating-types";
 
 const text = (value: unknown) => String(value ?? "").trim();
 const normalized = (value: unknown) =>
@@ -52,20 +58,28 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
     const sheet = book.Sheets[sheetName];
     if (!sheet) continue;
     const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1:A1");
-    const visibleCols = Array.from({ length: range.e.c - range.s.c + 1 }, (_, i) => range.s.c + i)
-      .filter((col) => !sheet["!cols"]?.[col]?.hidden);
+    const visibleCols = Array.from({ length: range.e.c - range.s.c + 1 }, (_, i) => range.s.c + i).filter(
+      (col) => !sheet["!cols"]?.[col]?.hidden,
+    );
     let headerRow = -1;
     for (let row = range.s.r; row <= Math.min(range.e.r, range.s.r + 40); row += 1) {
       const values = visibleCols.map((col) => mergedValue(sheet, row, col));
-      if (values.some(isNameHeader) && values.some(isClassHeader)) { headerRow = row; break; }
+      if (values.some(isNameHeader) && values.some(isClassHeader)) {
+        headerRow = row;
+        break;
+      }
     }
     if (headerRow < 0) continue;
     const nameCol = visibleCols.find((col) => isNameHeader(mergedValue(sheet, headerRow, col)));
     const classCol = visibleCols.find((col) => isClassHeader(mergedValue(sheet, headerRow, col)));
     const numberCol = visibleCols.find((col) => isNumberHeader(mergedValue(sheet, headerRow, col)));
-    const totalCol = [...visibleCols].reverse().find((col) => isTotalHeader(mergedValue(sheet, headerRow, col)));
+    const totalCol = [...visibleCols]
+      .reverse()
+      .find((col) => isTotalHeader(mergedValue(sheet, headerRow, col)));
     if (nameCol === undefined || classCol === undefined || totalCol === undefined) continue;
-    const dataCols = visibleCols.filter((col) => col !== numberCol && col !== nameCol && col !== classCol);
+    const dataCols = visibleCols.filter(
+      (col) => col !== numberCol && col !== nameCol && col !== classCol,
+    );
     const sheetColumns = dataCols.map((col) => {
       const label = text(mergedValue(sheet, headerRow, col)) || `Ustun ${XLSX.utils.encode_col(col)}`;
       let group = "Natijalar";
