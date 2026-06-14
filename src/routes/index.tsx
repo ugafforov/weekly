@@ -272,7 +272,15 @@ function RatingDashboard() {
   );
 }
 
-function UploadScreen({ busy, error, onChoose }: { busy?: string; error: string; onChoose: () => void }) {
+function UploadScreen({
+  busy,
+  error,
+  onChoose,
+}: {
+  busy?: string;
+  error: string;
+  onChoose: () => void;
+}) {
   return (
     <section className="mx-auto grid min-h-[calc(100vh-8rem)] max-w-4xl place-items-center py-12 text-center">
       <div>
@@ -281,15 +289,23 @@ function UploadScreen({ busy, error, onChoose }: { busy?: string; error: string;
           Haftalik natijalarni bir zumda tayyorlang.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          5–8 va 9–11 sinflar sahifalari avtomatik o‘qiladi, umumiy reyting va har bir sinf uchun Telegram hisoboti
-          yaratiladi.
+          5–8 va 9–11 sinflar sahifalari avtomatik o‘qiladi, umumiy reyting va har bir sinf
+          uchun Telegram hisoboti yaratiladi.
         </p>
-        <Button size="lg" variant="premium" className="mt-9 h-14 rounded-xl px-8 text-base" onClick={onChoose}>
+        <Button
+          size="lg"
+          variant="premium"
+          className="mt-9 h-14 rounded-xl px-8 text-base"
+          onClick={onChoose}
+        >
           {busy === "upload" ? <LoaderCircle className="animate-spin" /> : <FileSpreadsheet />}
           .xlsx faylni tanlash
         </Button>
         {error && (
-          <p role="alert" className="mx-auto mt-5 max-w-xl rounded-xl bg-coral-soft px-4 py-3 font-semibold text-coral-foreground">
+          <p
+            role="alert"
+            className="mx-auto mt-5 max-w-xl rounded-xl bg-coral-soft px-4 py-3 font-semibold text-coral-foreground"
+          >
             {error}
           </p>
         )}
@@ -315,14 +331,19 @@ function Report({
 }) {
   const isAll = activeClass === "all";
   const groupMeta = useMemo(
-    () => [...new Set(columns.map((c) => c.group))].map((group) => ({ group, columns: columns.filter((c) => c.group === group) })),
+    () =>
+      [...new Set(columns.map((c) => c.group))].map((group) => ({
+        group,
+        columns: columns.filter((c) => c.group === group),
+      })),
     [columns],
   );
   const subjectGroups = useMemo(
     () =>
       groupMeta.filter(
         ({ group, columns: groupColumns }) =>
-          groupColumns.length > 1 && !/intizom|tarbiya|davomat|hafta|jami|umumiy|o['ʻ‘’` ]?rtacha/i.test(group),
+          groupColumns.length > 1 &&
+          !/intizom|tarbiya|davomat|hafta|jami|umumiy|o['ʻ‘’` ]?rtacha/i.test(group),
       ),
     [groupMeta],
   );
@@ -350,7 +371,9 @@ function Report({
   };
   const isSingleTallHeader = (group: string, groupColumns: RatingColumn[]) =>
     groupColumns.length === 1 &&
-    /o['ʻ‘’` ]?rtacha|haftalik|imtihon|\d+[- ]?hafta|jami|umumiy/i.test(`${group} ${groupColumns[0]?.label}`);
+    /o['ʻ‘’` ]?rtacha|haftalik|imtihon|\d+[- ]?hafta|jami|umumiy/i.test(
+      `${group} ${groupColumns[0]?.label}`,
+    );
 
   return (
     <section
