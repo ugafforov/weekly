@@ -1,28 +1,5 @@
 import * as XLSX from "xlsx-js-style";
-
-export type StudentStatus = "normal" | "wrong-id" | "absent";
-
-export interface RatingColumn {
-  key: string;
-  label: string;
-  group: string;
-}
-
-export interface RatingStudent {
-  rowNumber: number;
-  name: string;
-  className: string;
-  total: number;
-  status: StudentStatus;
-  values: Record<string, string | number>;
-}
-
-export interface RatingWorkbook {
-  fileName: string;
-  date: string;
-  columns: RatingColumn[];
-  students: RatingStudent[];
-}
+import type { ColumnRole, RatingColumn, RatingStudent, RatingWorkbook, StudentStatus } from "./rating-types";
 
 const text = (value: unknown) => String(value ?? "").trim();
 const normalized = (value: unknown) =>
@@ -35,6 +12,16 @@ const isClassHeader = (value: unknown) => /(^|\s)(sinf|class)($|\s)/.test(normal
 const isNumberHeader = (value: unknown) => /^(№|no|nº|t\/r)$/i.test(text(value));
 const isTotalHeader = (value: unknown) =>
   /5[- ]?hafta|weekly total|jami ball|umumiy/.test(normalized(value));
+const roleFor = (label: string, group: string): ColumnRole => {
+  const value = normalized(`${group} ${label}`);
+  if (/5[- ]?hafta|weekly total/.test(value)) return "total";
+  if (/o[' ]?qituvchi|teacher/.test(value)) return "teacher";
+  if (/^id$| id /.test(` ${value} `)) return "id";
+  if (/fan|subject/.test(value)) return "subject";
+  if (/natija|foiz|ball/.test(value)) return "result";
+  if (/davomat|kech|vazifa|odob|intizom/.test(value)) return "discipline";
+  return "other";
+};
 
 function colorKind(cell: XLSX.CellObject | undefined): StudentStatus | undefined {
   const rgb = text(cell?.s?.fill?.fgColor?.rgb).replace(/^FF/, "").toUpperCase();
