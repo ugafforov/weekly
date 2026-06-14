@@ -174,20 +174,19 @@ function Report({ ref, workbook, activeClass, students, columns, thirdSubject }:
 }
 
 function StudentRow({ student, index, columns }: { student: RatingStudent; index: number; columns: RatingColumn[] }) {
-  const isAbsent = student.status === "absent";
-  return <tr className={isAbsent ? "row-absent" : ""}>
+  return <tr>
     <td className="rank">{index + 1}</td>
     <td className="student-name">{student.name}</td>
     <td className="class-col">{student.className}</td>
     {columns.map((c) => {
       const value = student.values[c.key];
+      const cellStatus = student.cellStatuses?.[c.key];
       let cellClass = "";
-      if (!isAbsent) {
-        if (student.status === "wrong-id" && c.role === "result") cellClass = "cell-wrong";
-        else if (c.role === "total") cellClass = totalTone(student.total);
-        else if (c.role === "result") cellClass = resultTone(value);
-      }
-      return <td key={c.key} className={cellClass}>{value === "" || value === undefined ? (isAbsent ? "" : "—") : value}</td>;
+      if (cellStatus === "absent") cellClass = "cell-absent";
+      else if (cellStatus === "wrong-id" || (student.status === "wrong-id" && c.role === "result")) cellClass = "cell-wrong";
+      else if (c.role === "total") cellClass = totalTone(student.total);
+      else if (c.role === "result") cellClass = resultTone(value);
+      return <td key={c.key} className={cellClass}>{value === "" || value === undefined ? "" : value}</td>;
     })}
   </tr>;
 }
