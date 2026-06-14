@@ -58,9 +58,10 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
     const sheet = book.Sheets[sheetName];
     if (!sheet) continue;
     const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1:A1");
-    const visibleCols = Array.from({ length: range.e.c - range.s.c + 1 }, (_, i) => range.s.c + i).filter(
-      (col) => !sheet["!cols"]?.[col]?.hidden,
-    );
+    const visibleCols = Array.from(
+      { length: range.e.c - range.s.c + 1 },
+      (_, i) => range.s.c + i,
+    ).filter((col) => !sheet["!cols"]?.[col]?.hidden);
     let headerRow = -1;
     for (let row = range.s.r; row <= Math.min(range.e.r, range.s.r + 40); row += 1) {
       const values = visibleCols.map((col) => mergedValue(sheet, row, col));
@@ -138,7 +139,9 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
       }
     }
   }
-  if (!students.length) throw new Error("5–8 yoki 9–11 umumiy reyting sahifalarida o‘quvchilar topilmadi.");
+  if (!students.length) {
+    throw new Error("5–8 yoki 9–11 umumiy reyting sahifalarida o‘quvchilar topilmadi.");
+  }
   return {
     fileName: file.name,
     date: date || new Date().toLocaleDateString("uz-UZ"),
