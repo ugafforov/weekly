@@ -4,20 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
@@ -58,6 +44,10 @@
   --color-coral-foreground: var(--coral-foreground);
   --color-slate-soft: var(--slate-soft);
   --color-slate-foreground: var(--slate-foreground);
+  --color-dash-bg: var(--dash-bg);
+  --color-dash-surface: var(--dash-surface);
+  --color-dash-border: var(--dash-border);
+  --color-dash-muted: var(--dash-muted);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -111,6 +101,11 @@
   --rating-grid: oklch(0.41 0.01 210);
   --rating-wrong: oklch(0.84 0.19 80);
   --rating-absent: oklch(0.62 0.005 250);
+  /* Dashboard tokens */
+  --dash-bg: oklch(0.955 0.007 210);
+  --dash-surface: oklch(0.99 0.003 195);
+  --dash-border: oklch(0.88 0.01 205);
+  --dash-muted: oklch(0.50 0.02 205);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -170,17 +165,6 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-body);
-    background-image:
-      radial-gradient(
-        circle at 8% 0%,
-        color-mix(in oklab, var(--primary) 9%, transparent),
-        transparent 28rem
-      ),
-      radial-gradient(
-        circle at 95% 12%,
-        color-mix(in oklab, var(--sage) 22%, transparent),
-        transparent 30rem
-      );
     min-width: 320px;
   }
 
@@ -211,7 +195,176 @@
   color: var(--primary);
 }
 
+/* ─── Upload screen ─────────────────────────────────────────────── */
 @layer components {
+  .upload-bg {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(
+        ellipse 70% 45% at 50% 0%,
+        color-mix(in oklab, var(--primary) 10%, transparent),
+        transparent
+      ),
+      radial-gradient(
+        ellipse 50% 40% at 90% 100%,
+        color-mix(in oklab, var(--sage) 18%, transparent),
+        transparent
+      );
+  }
+
+  .upload-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(100%, 420px);
+    border-radius: 1.5rem;
+    border: 2px dashed var(--dash-border);
+    background: oklch(1 0 0 / 70%);
+    backdrop-filter: blur(20px);
+    padding: 2.5rem 2rem;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+    box-shadow:
+      0 2px 4px oklch(0 0 0 / 4%),
+      0 12px 40px -16px oklch(0 0 0 / 12%);
+  }
+  .upload-card:hover {
+    border-color: var(--primary);
+    background: oklch(1 0 0 / 85%);
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 8px oklch(0 0 0 / 6%),
+      0 20px 50px -16px oklch(0 0 0 / 16%);
+  }
+  .upload-card-drag {
+    border-color: var(--primary) !important;
+    background: color-mix(in oklab, var(--primary) 6%, white) !important;
+    transform: scale(1.01);
+  }
+
+  .upload-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--primary) 12%, transparent);
+    border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
+    transition: background 0.18s ease;
+  }
+  .upload-icon-drag {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  /* ─── Dashboard shell ──────────────────────────────────────────── */
+  .bg-dash-bg { background-color: var(--dash-bg); }
+  .bg-dash-surface { background-color: var(--dash-surface); }
+  .border-dash-border { border-color: var(--dash-border); }
+  .text-dash-muted { color: var(--dash-muted); }
+
+  .dash-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--primary) 12%, transparent);
+    border: 1px solid color-mix(in oklab, var(--primary) 22%, transparent);
+    padding: 0.15rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.01em;
+  }
+
+  .dash-input-label {
+    display: flex;
+    height: 2.25rem;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--dash-border);
+    background: oklch(1 0 0 / 80%);
+    padding: 0 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: text;
+    transition: border-color 0.15s;
+  }
+  .dash-input-label:focus-within {
+    border-color: var(--primary);
+  }
+
+  .dash-btn-outline {
+    border-color: var(--dash-border);
+    background: oklch(1 0 0 / 70%);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .dash-btn-outline:hover {
+    background: oklch(1 0 0 / 95%);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  /* ─── Class tabs ───────────────────────────────────────────────── */
+  .class-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 1px solid var(--dash-border);
+    background: oklch(1 0 0 / 65%);
+    padding: 0.3rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--dash-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .class-tab:hover:not(.class-tab-active) {
+    background: oklch(1 0 0 / 90%);
+    color: var(--foreground);
+    border-color: color-mix(in oklab, var(--primary) 35%, transparent);
+  }
+  .class-tab-active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 0 2px 8px color-mix(in oklab, var(--primary) 30%, transparent);
+  }
+  .class-tab-active:hover { background: var(--primary); }
+  .class-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: oklch(0 0 0 / 10%);
+  }
+  .class-tab-active .class-tab-count {
+    background: oklch(1 0 0 / 22%);
+  }
+
+  /* ─── Dashboard table wrapper ──────────────────────────────────── */
+  .dash-table-wrap {
+    border-radius: 1rem;
+    border: 1px solid var(--dash-border);
+    background: oklch(1 0 0 / 90%);
+    box-shadow:
+      0 1px 3px oklch(0 0 0 / 5%),
+      0 8px 32px -8px oklch(0 0 0 / 10%);
+    overflow: hidden;
+  }
+
+  /* ─── Report head (for printable table) ────────────────────────── */
   .report-head {
     display: flex;
     flex-direction: column;
@@ -226,6 +379,8 @@
   .report-head img { height: 5.9rem; width: auto; object-fit: contain; }
   .report-head h2 { margin: 0.1rem 0 0; font-size: 1.35rem; line-height: 1; font-weight: 800; letter-spacing: 0; }
   .report-head p { margin: 0; font-size: 1.15rem; line-height: 1; font-weight: 500; }
+
+  /* ─── Telegram/printable report ────────────────────────────────── */
   .telegram-report {
     width: min(100%, 1280px);
     margin-inline: auto;
@@ -236,9 +391,17 @@
     font-family: Georgia, "Times New Roman", serif;
   }
   .telegram-report .report-head { min-height: 13.9rem; }
+
+  /* ─── Rating table ─────────────────────────────────────────────── */
   .rating-table { table-layout: fixed; font-family: Georgia, "Times New Roman", serif; }
-  .rating-table th, .rating-table td { border-right: 1px solid var(--rating-grid); border-bottom: 1px solid var(--rating-grid); text-align: center; vertical-align: middle; }
+  .rating-table th, .rating-table td {
+    border-right: 1px solid var(--rating-grid);
+    border-bottom: 1px solid var(--rating-grid);
+    text-align: center;
+    vertical-align: middle;
+  }
   .rating-table th:last-child, .rating-table td:last-child { border-right: 0; }
+
   .rating-table .group-row th {
     background: var(--rating-header);
     color: oklch(0.06 0 0);
@@ -247,8 +410,18 @@
     letter-spacing: 0;
     text-transform: uppercase;
   }
-  .rating-table .group-row .group-title { font-size: 0.88rem; line-height: 1.02; font-weight: 900; color: oklch(0.06 0 0); }
-  .rating-table .group-row .group-sub { font-size: 0.78rem; font-weight: 700; margin-top: 0.08rem; letter-spacing: 0; }
+  .rating-table .group-row .group-title {
+    font-size: 0.88rem;
+    line-height: 1.02;
+    font-weight: 900;
+    color: oklch(0.06 0 0);
+  }
+  .rating-table .group-row .group-sub {
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-top: 0.08rem;
+    letter-spacing: 0;
+  }
   .rating-table .label-row th {
     background: var(--rating-subheader);
     color: oklch(0.06 0 0);
@@ -267,20 +440,75 @@
     white-space: nowrap;
     line-height: 1;
   }
-  .rating-table td { padding: 0.31rem 0.08rem; font-weight: 500; font-size: 0.69rem; line-height: 1.05; white-space: nowrap; background: oklch(0.995 0 0); }
-  .rating-table tbody tr:nth-child(even) td:not(.cell-wrong):not(.cell-absent):not(.score-high):not(.score-mid):not(.score-low):not(.score-bad) { background: oklch(0.975 0 0); }
-  .rating-table .col-rank { width: 2.95rem; }
-  .rating-table .col-class { width: 3.6rem; }
+
+  /* Compact row styles */
+  .rating-table td {
+    padding: 0.28rem 0.1rem;
+    font-weight: 500;
+    font-size: 0.7rem;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+  .row-even td { background: oklch(0.998 0 0); }
+  .row-odd td { background: oklch(0.977 0.003 195); }
+
+  /* Override row bg for special cells */
+  .rating-table .cell-absent,
+  .rating-table .cell-wrong,
+  .rating-table .score-high,
+  .rating-table .score-mid,
+  .rating-table .score-low,
+  .rating-table .score-bad { /* individual overrides below */ }
+
+  .rating-table .col-rank { width: 2.9rem; }
+  .rating-table .col-class { width: 3.8rem; }
   .rating-table .name-col { width: 16.4rem; text-align: center; }
-  .rating-table .student-name { text-align: left; font-size: 0.73rem; font-weight: 500; padding-left: 0.15rem; }
-  .rating-table .rank { font-weight: 800; }
-  .rating-table .class-col { font-weight: 800; }
+
+  .rating-table .rank {
+    font-weight: 800;
+    font-size: 0.75rem;
+  }
+  .rank-top {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
+    color: var(--primary);
+    font-size: 0.68rem;
+    font-weight: 900;
+  }
+
+  .rating-table .student-name {
+    text-align: left;
+    font-size: 0.74rem;
+    font-weight: 500;
+    padding-left: 0.4rem;
+  }
+  .rating-table .class-col { font-weight: 700; }
+
+  .class-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: color-mix(in oklab, var(--primary) 13%, transparent);
+    color: oklch(0.32 0.07 185);
+    letter-spacing: 0.01em;
+  }
+
   .rating-table .cell-absent { background: var(--rating-absent) !important; color: oklch(0.06 0 0); }
   .rating-table .cell-wrong { background: var(--rating-wrong) !important; color: oklch(0.16 0.03 70) !important; font-weight: 800; }
-  .rating-table .score-high { background: oklch(0.76 0.12 138); color: oklch(0.13 0.04 138); font-weight: 800; }
-  .rating-table .score-mid { background: oklch(0.88 0.12 106); color: oklch(0.18 0.04 95); font-weight: 800; }
-  .rating-table .score-low { background: oklch(0.84 0.13 70); color: oklch(0.2 0.05 60); font-weight: 800; }
-  .rating-table .score-bad { background: oklch(0.69 0.2 25); color: oklch(0.98 0.01 20); font-weight: 800; }
+  .rating-table .score-high { background: oklch(0.76 0.12 138) !important; color: oklch(0.13 0.04 138); font-weight: 800; }
+  .rating-table .score-mid  { background: oklch(0.88 0.12 106) !important; color: oklch(0.18 0.04 95);  font-weight: 800; }
+  .rating-table .score-low  { background: oklch(0.84 0.13 70)  !important; color: oklch(0.2 0.05 60);   font-weight: 800; }
+  .rating-table .score-bad  { background: oklch(0.69 0.2 25)   !important; color: oklch(0.98 0.01 20);  font-weight: 800; }
+
+  /* ─── Legend ───────────────────────────────────────────────────── */
   .legend {
     display: grid;
     grid-template-columns: 3rem 1fr;
@@ -301,14 +529,7 @@
 }
 
 @media print {
-  body {
-    background: white;
-  }
-  .no-print {
-    display: none !important;
-  }
-  .print-area {
-    box-shadow: none !important;
-    border: 0 !important;
-  }
+  body { background: white; }
+  .no-print { display: none !important; }
+  .print-area { box-shadow: none !important; border: 0 !important; }
 }

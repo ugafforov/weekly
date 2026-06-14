@@ -9,6 +9,8 @@ import {
   Pencil,
   Upload,
   Users,
+  Trophy,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RatingColumn, RatingStudent, RatingWorkbook } from "@/lib/rating-types";
@@ -44,10 +46,10 @@ const resultTone = (v: string | number | undefined) => {
   return "score-bad";
 };
 const isTeacherColumn = (c: RatingColumn) =>
-  /ustoz|o['ʻ‘’` ]?qituvchi|teacher/i.test(`${c.label} ${c.group}`) || c.role === "teacher";
+  /ustoz|o['ʻ''` ]?qituvchi|teacher/i.test(`${c.label} ${c.group}`) || c.role === "teacher";
 const displayLabel = (label: string) => {
   const value = label.replace(/\s+/g, " ").trim();
-  if (/to['ʻ‘’` ]?g['ʻ‘’` ]?ri.*javob/i.test(value)) return "TO‘G‘RI JAVOBLAR";
+  if (/to['ʻ''` ]?g['ʻ''` ]?ri.*javob/i.test(value)) return "TO'G'RI JAVOBLAR";
   if (/natija.*bal|bal/i.test(value)) return "BAL";
   if (/natija|foiz/i.test(value)) return "NATIJASI";
   if (/level|etap/i.test(value)) return "LEVEL (ETAP)";
@@ -67,10 +69,20 @@ function RatingDashboard() {
   const [thirdSubject, setThirdSubject] = useState("");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+
   const classes = useMemo(
     () => [...new Set(workbook?.students.map((s) => s.className) ?? [])].sort(classSort),
     [workbook],
   );
+  const classCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    workbook?.students.forEach((s) => {
+      counts[s.className] = (counts[s.className] ?? 0) + 1;
+    });
+    return counts;
+  }, [workbook]);
+
   const students = useMemo(
     () =>
       (
@@ -88,9 +100,7 @@ function RatingDashboard() {
     [activeClass, allColumns],
   );
 
-  async function upload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function processFile(file: File) {
     setBusy("upload");
     setError("");
     try {
@@ -100,11 +110,24 @@ function RatingDashboard() {
       setWorkbook(parsed);
       setActiveClass("all");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Excel faylini o‘qib bo‘lmadi.");
+      setError(caught instanceof Error ? caught.message : "Excel faylini o'qib bo'lmadi.");
     } finally {
       setBusy(undefined);
-      event.target.value = "";
     }
+  }
+
+  async function upload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+    event.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
   }
 
   async function downloadImage() {
@@ -173,101 +196,132 @@ function RatingDashboard() {
     }
   }
 
+  if (!workbook) {
+    return (
+      <UploadScreen
+        busy={busy}
+        error={error}
+        isDragging={isDragging}
+        onChoose={() => inputRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        inputRef={inputRef}
+        onFileChange={upload}
+      />
+    );
+  }
+
   return (
-    <main className="min-h-screen px-4 py-5 lg:px-8">
-      <header className="no-print mx-auto flex max-w-[1840px] items-center justify-between border-b border-border pb-4">
-        <img src={logo} alt="Al-Xorazmiy School" className="h-12 w-auto object-contain sm:h-14" />
-        <div className="flex gap-2">
-          {workbook && (
-            <Button variant="outline" onClick={downloadExcel} disabled={Boolean(busy)}>
-              <FileSpreadsheet /> Excel
-            </Button>
-          )}
-          <Button variant="premium" onClick={() => inputRef.current?.click()}>
-            {busy === "upload" ? <LoaderCircle className="animate-spin" /> : <Upload />}
-            {workbook ? "Faylni almashtirish" : "Excel yuklash"}
-          </Button>
-        </div>
-        <input
-          ref={inputRef}
-          className="hidden"
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={upload}
-        />
-      </header>
-      {!workbook ? (
-        <UploadScreen busy={busy} error={error} onChoose={() => inputRef.current?.click()} />
-      ) : (
-        <div className="mx-auto max-w-[1840px] py-6">
-          <div className="no-print mb-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="eyebrow">{workbook.fileName}</p>
-              <h1 className="mt-1 font-display text-3xl font-extrabold">Haftalik reyting</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Umumiy jadvalda barcha ma’lumotlar, sinf ko‘rinishida ota-onalar uchun
-                soddalashtirilgan hisobot.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {activeClass !== "all" && (
-                <label className="flex h-10 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-semibold">
-                  <Pencil className="size-4 text-primary" />
-                  <span>3-fan:</span>
-                  <input
-                    value={thirdSubject}
-                    onChange={(e) => setThirdSubject(e.target.value)}
-                    placeholder="Excel bo‘yicha"
-                    className="w-28 bg-transparent outline-none placeholder:text-muted-foreground"
-                  />
-                </label>
-              )}
-              <Button
-                variant="outline"
-                onClick={downloadImage}
-                disabled={Boolean(busy) || activeClass === "all"}
-              >
-                <ImageDown /> Telegram PNG
-              </Button>
-              <Button
-                variant="outline"
-                onClick={downloadPdf}
-                disabled={Boolean(busy) || activeClass === "all"}
-              >
-                <FileDown /> PDF
-              </Button>
-            </div>
+    <main className="min-h-screen bg-dash-bg">
+      <input
+        ref={inputRef}
+        className="hidden"
+        type="file"
+        accept=".xlsx,.xls"
+        onChange={upload}
+      />
+
+      {/* Top bar */}
+      <header className="no-print sticky top-0 z-30 border-b border-dash-border bg-dash-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-[1840px] items-center gap-3 px-4 lg:px-6">
+          <img src={logo} alt="Al-Xorazmiy School" className="h-8 w-auto object-contain" />
+          <div className="mx-3 h-5 w-px bg-dash-border" />
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-xs font-semibold text-dash-muted">{workbook.fileName}</span>
+            <span className="text-[11px] text-dash-muted/70">{workbook.date} &middot; {workbook.students.length} o'quvchi</span>
           </div>
-          <nav
-            className="no-print mb-5 flex gap-2 overflow-x-auto border-b border-border pb-3"
-            aria-label="Sinflar"
-          >
-            <Button
-              variant={activeClass === "all" ? "premium" : "ghost"}
-              onClick={() => setActiveClass("all")}
-            >
-              <Users /> Umumiy reyting
-            </Button>
-            {classes.map((name) => (
-              <Button
-                key={name}
-                variant={activeClass === name ? "premium" : "ghost"}
-                onClick={() => setActiveClass(name)}
-              >
-                {name}
+          <div className="ml-auto flex items-center gap-2">
+            {workbook && (
+              <Button size="sm" variant="outline" className="dash-btn-outline" onClick={downloadExcel} disabled={Boolean(busy)}>
+                {busy === "excel" ? <LoaderCircle className="animate-spin" /> : <FileSpreadsheet />}
+                <span className="hidden sm:inline">Excel</span>
               </Button>
-            ))}
-          </nav>
-          <Report
-            ref={reportRef}
-            workbook={workbook}
-            activeClass={activeClass}
-            students={students}
-            columns={columns}
-            thirdSubject={thirdSubject}
-          />
+            )}
+            <Button size="sm" variant="outline" className="dash-btn-outline" onClick={() => inputRef.current?.click()}>
+              {busy === "upload" ? <LoaderCircle className="animate-spin" /> : <Upload />}
+              <span className="hidden sm:inline">Faylni almashtirish</span>
+            </Button>
+          </div>
         </div>
-      )}
+      </header>
+
+      <div className="mx-auto max-w-[1840px] px-4 pb-8 pt-5 lg:px-6">
+        {/* Page title + action row */}
+        <div className="no-print mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Trophy className="size-5 text-primary" />
+            <h1 className="text-lg font-extrabold tracking-tight">Haftalik reyting</h1>
+            <span className="dash-badge">{workbook.date}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {activeClass !== "all" && (
+              <label className="dash-input-label">
+                <Pencil className="size-3.5 text-primary" />
+                <span className="text-xs font-semibold text-dash-muted">3-fan:</span>
+                <input
+                  value={thirdSubject}
+                  onChange={(e) => setThirdSubject(e.target.value)}
+                  placeholder="Excel bo'yicha"
+                  className="w-24 bg-transparent text-xs outline-none placeholder:text-dash-muted/50"
+                />
+              </label>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="dash-btn-outline"
+              onClick={downloadImage}
+              disabled={Boolean(busy) || activeClass === "all"}
+            >
+              {busy === "image" ? <LoaderCircle className="animate-spin" /> : <ImageDown />}
+              Telegram PNG
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="dash-btn-outline"
+              onClick={downloadPdf}
+              disabled={Boolean(busy) || activeClass === "all"}
+            >
+              {busy === "pdf" ? <LoaderCircle className="animate-spin" /> : <FileDown />}
+              PDF
+            </Button>
+          </div>
+        </div>
+
+        {/* Class tabs */}
+        <nav className="no-print mb-4 flex gap-1.5 overflow-x-auto pb-1" aria-label="Sinflar">
+          <button
+            className={`class-tab ${activeClass === "all" ? "class-tab-active" : ""}`}
+            onClick={() => setActiveClass("all")}
+          >
+            <Users className="size-3.5" />
+            Umumiy
+            <span className="class-tab-count">{workbook.students.length}</span>
+          </button>
+          {classes.map((name) => (
+            <button
+              key={name}
+              className={`class-tab ${activeClass === name ? "class-tab-active" : ""}`}
+              onClick={() => setActiveClass(name)}
+            >
+              {name}
+              <span className="class-tab-count">{classCounts[name] ?? 0}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Report table */}
+        <Report
+          ref={reportRef}
+          workbook={workbook}
+          activeClass={activeClass}
+          students={students}
+          columns={columns}
+          thirdSubject={thirdSubject}
+        />
+      </div>
     </main>
   );
 }
@@ -275,42 +329,86 @@ function RatingDashboard() {
 function UploadScreen({
   busy,
   error,
+  isDragging,
   onChoose,
+  onDrop,
+  onDragOver,
+  onDragLeave,
+  inputRef,
+  onFileChange,
 }: {
   busy?: string;
   error: string;
+  isDragging: boolean;
   onChoose: () => void;
+  onDrop: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <section className="mx-auto grid min-h-[calc(100vh-8rem)] max-w-4xl place-items-center py-12 text-center">
-      <div>
-        <p className="eyebrow">AL-XORAZMIY SCHOOL</p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight sm:text-6xl">
-          Haftalik natijalarni bir zumda tayyorlang.
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          5–8 va 9–11 sinflar sahifalari avtomatik o‘qiladi, umumiy reyting va har bir sinf uchun
-          Telegram hisoboti yaratiladi.
-        </p>
-        <Button
-          size="lg"
-          variant="premium"
-          className="mt-9 h-14 rounded-xl px-8 text-base"
-          onClick={onChoose}
-        >
-          {busy === "upload" ? <LoaderCircle className="animate-spin" /> : <FileSpreadsheet />}
-          .xlsx faylni tanlash
-        </Button>
-        {error && (
-          <p
-            role="alert"
-            className="mx-auto mt-5 max-w-xl rounded-xl bg-coral-soft px-4 py-3 font-semibold text-coral-foreground"
-          >
-            {error}
+    <div className="upload-bg flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <input
+        ref={inputRef}
+        className="hidden"
+        type="file"
+        accept=".xlsx,.xls"
+        onChange={onFileChange}
+      />
+
+      {/* Logo */}
+      <img src={logo} alt="Al-Xorazmiy School" className="mb-8 h-16 w-auto object-contain opacity-90" />
+
+      {/* Drop zone card */}
+      <div
+        className={`upload-card ${isDragging ? "upload-card-drag" : ""}`}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onClick={onChoose}
+      >
+        <div className={`upload-icon-wrap ${isDragging ? "upload-icon-drag" : ""}`}>
+          {busy === "upload" ? (
+            <LoaderCircle className="size-8 animate-spin text-primary" />
+          ) : (
+            <FileSpreadsheet className="size-8 text-primary" />
+          )}
+        </div>
+        <div className="mt-4 text-center">
+          <p className="text-base font-bold text-foreground">
+            {isDragging ? "Fayl qo'yish uchun tashlang" : "Excel fayl yuklang"}
           </p>
-        )}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Faylni bu yerga sudrab tashlang yoki bosing
+          </p>
+          <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
+            .xlsx / .xls
+          </p>
+        </div>
+        <div className="mt-5 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90">
+          <Upload className="size-4" />
+          Faylni tanlash
+          <ChevronRight className="size-3.5 opacity-70" />
+        </div>
       </div>
-    </section>
+
+      {/* Feature pills */}
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        {["5–8 sinf", "9–11 sinf", "Umumiy reyting", "Telegram PNG", "PDF eksport"].map((f) => (
+          <span key={f} className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
+            {f}
+          </span>
+        ))}
+      </div>
+
+      {error && (
+        <div className="mt-5 flex max-w-sm items-start gap-3 rounded-xl border border-coral-soft/50 bg-coral-soft/60 px-4 py-3">
+          <span className="mt-0.5 text-base">⚠️</span>
+          <p className="text-sm font-semibold text-coral-foreground">{error}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -343,14 +441,14 @@ function Report({
       groupMeta.filter(
         ({ group, columns: groupColumns }) =>
           groupColumns.length > 1 &&
-          !/intizom|tarbiya|davomat|hafta|jami|umumiy|o['ʻ‘’` ]?rtacha/i.test(group),
+          !/intizom|tarbiya|davomat|hafta|jami|umumiy|o['ʻ''` ]?rtacha/i.test(group),
       ),
     [groupMeta],
   );
   const groupSavol = useMemo(() => {
     const result: Record<string, number> = {};
     for (const { group, columns: cols } of groupMeta) {
-      const javobCol = cols.find((c) => /to[' ʻ‘’`]?g[' ʻ‘’`]?ri.*javob/i.test(c.label));
+      const javobCol = cols.find((c) => /to[' ʻ''`]?g[' ʻ''`]?ri.*javob/i.test(c.label));
       const natijaCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
       if (!javobCol || !natijaCol) continue;
       let max = 0;
@@ -371,18 +469,18 @@ function Report({
   };
   const isSingleTallHeader = (group: string, groupColumns: RatingColumn[]) =>
     groupColumns.length === 1 &&
-    /o['ʻ‘’` ]?rtacha|haftalik|imtihon|\d+[- ]?hafta|jami|umumiy/i.test(
+    /o['ʻ''` ]?rtacha|haftalik|imtihon|\d+[- ]?hafta|jami|umumiy/i.test(
       `${group} ${groupColumns[0]?.label}`,
     );
 
   return (
     <section
       ref={ref}
-      className={`print-area overflow-hidden bg-card report-shadow ${isAll ? "rounded-2xl border border-border" : "telegram-report"}`}
+      className={`print-area overflow-hidden ${isAll ? "dash-table-wrap" : "telegram-report"}`}
     >
       <div className="report-head">
         <img src={logo} alt="Al-Xorazmiy School" />
-        <h2>HAFTALIK JAMG‘ARILGAN BALLAR</h2>
+        <h2>HAFTALIK JAMG'ARILGAN BALLAR</h2>
         <p>( {workbook.date} )</p>
       </div>
       {!isAll && (
@@ -393,10 +491,10 @@ function Report({
           </div>
           <div className="legend-text">
             <span>
-              Ushbu rang o‘quvchi o‘z <b>ID</b> raqamini xato kiritganini bildiradi.
+              Ushbu rang o'quvchi o'z <b>ID</b> raqamini xato kiritganini bildiradi.
             </span>
             <span>
-              Ushbu rang o‘quvchi <b>Imtihonda qatnashmaganini</b> bildiradi
+              Ushbu rang o'quvchi <b>Imtihonda qatnashmaganini</b> bildiradi
             </span>
           </div>
         </div>
@@ -450,6 +548,7 @@ function Report({
                 student={student}
                 index={index}
                 columns={columns}
+                isAll={isAll}
               />
             ))}
           </tbody>
@@ -463,16 +562,28 @@ function StudentRow({
   student,
   index,
   columns,
+  isAll,
 }: {
   student: RatingStudent;
   index: number;
   columns: RatingColumn[];
+  isAll: boolean;
 }) {
+  const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : null;
+
   return (
-    <tr>
-      <td className="rank">{index + 1}</td>
+    <tr className={index % 2 === 0 ? "row-even" : "row-odd"}>
+      <td className="rank">
+        {medal && isAll ? (
+          <span title={`${index + 1}-o'rin`}>{medal}</span>
+        ) : (
+          <span className={index < 3 ? "rank-top" : ""}>{index + 1}</span>
+        )}
+      </td>
       <td className="student-name">{student.name}</td>
-      <td className="class-col">{student.className}</td>
+      <td className="class-col">
+        <span className="class-chip">{student.className}</span>
+      </td>
       {columns.map((c) => {
         const value = student.values[c.key];
         const cellStatus = student.cellStatuses?.[c.key];
@@ -487,7 +598,7 @@ function StudentRow({
         else if (c.role === "result") cellClass = resultTone(value);
         return (
           <td key={c.key} className={cellClass}>
-            {value === "" || value === undefined ? "" : value}
+            {value === "" || value === undefined ? <span className="text-dash-muted/40">—</span> : value}
           </td>
         );
       })}
