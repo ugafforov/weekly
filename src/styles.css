@@ -199,6 +199,38 @@
   box-shadow: 0 30px 85px -50px color-mix(in oklab, var(--foreground) 34%, transparent);
 }
 
+@utility eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--primary);
+}
+
+@layer components {
+  .report-head {
+    background: linear-gradient(120deg, var(--card), color-mix(in oklab, var(--accent) 52%, var(--card)));
+  }
+  .telegram-report { min-width: 1040px; }
+  .rating-table th, .rating-table td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); text-align: center; }
+  .rating-table th:last-child, .rating-table td:last-child { border-right: 0; }
+  .rating-table .group-row th { background: var(--primary); color: var(--primary-foreground); padding: 0.75rem 0.55rem; font-weight: 800; letter-spacing: 0.025em; }
+  .rating-table .label-row th { background: var(--secondary); color: var(--secondary-foreground); padding: 0.6rem 0.45rem; font-weight: 800; max-width: 8rem; }
+  .rating-table td { padding: 0.62rem 0.55rem; font-weight: 650; white-space: nowrap; }
+  .rating-table tbody tr:nth-child(even):not(.row-wrong):not(.row-absent) { background: color-mix(in oklab, var(--muted) 45%, var(--card)); }
+  .rating-table .name-col { min-width: 15rem; text-align: left; }
+  .rating-table .student-name { min-width: 15rem; text-align: left; font-size: 0.78rem; }
+  .student-name span, .student-name small { display: block; }
+  .student-name small { margin-top: 0.15rem; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+  .rating-table .rank { width: 3rem; font-family: var(--font-heading); font-weight: 850; }
+  .rating-table .row-wrong { background: var(--amber-soft); color: var(--amber-foreground); }
+  .rating-table .row-absent { background: var(--slate-soft); color: var(--slate-foreground); }
+  .rating-table .score-high { background: var(--sage); color: var(--sage-foreground); font-size: 0.85rem; font-weight: 900; }
+  .rating-table .score-mid { background: var(--amber-soft); color: var(--amber-foreground); font-size: 0.85rem; font-weight: 900; }
+  .rating-table .score-low { background: var(--coral-soft); color: var(--coral-foreground); font-size: 0.85rem; font-weight: 900; }
+  .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .legend .dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 999px; }
+}
+
 @media print {
   body {
     background: white;
