@@ -289,8 +289,8 @@ function UploadScreen({
           Haftalik natijalarni bir zumda tayyorlang.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          5–8 va 9–11 sinflar sahifalari avtomatik o‘qiladi, umumiy reyting va har bir sinf
-          uchun Telegram hisoboti yaratiladi.
+          5–8 va 9–11 sinflar sahifalari avtomatik o‘qiladi, umumiy reyting va har bir sinf uchun
+          Telegram hisoboti yaratiladi.
         </p>
         <Button
           size="lg"
@@ -483,8 +483,7 @@ function StudentRow({
           (student.status === "wrong-id" && c.role === "result")
         ) {
           cellClass = "cell-wrong";
-        }
-        else if (c.role === "total") cellClass = totalTone(student.total);
+        } else if (c.role === "total") cellClass = totalTone(student.total);
         else if (c.role === "result") cellClass = resultTone(value);
         return (
           <td key={c.key} className={cellClass}>
