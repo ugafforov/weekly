@@ -1,5 +1,11 @@
 import * as XLSX from "xlsx-js-style";
-import type { ColumnRole, RatingColumn, RatingStudent, RatingWorkbook, StudentStatus } from "./rating-types";
+import type {
+  ColumnRole,
+  RatingColumn,
+  RatingStudent,
+  RatingWorkbook,
+  StudentStatus,
+} from "./rating-types";
 
 const text = (value: unknown) => String(value ?? "").trim();
 const normalized = (value: unknown) =>
@@ -52,26 +58,38 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
     const sheet = book.Sheets[sheetName];
     if (!sheet) continue;
     const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1:A1");
-    const visibleCols = Array.from({ length: range.e.c - range.s.c + 1 }, (_, i) => range.s.c + i)
-      .filter((col) => !sheet["!cols"]?.[col]?.hidden);
+    const visibleCols = Array.from(
+      { length: range.e.c - range.s.c + 1 },
+      (_, i) => range.s.c + i,
+    ).filter((col) => !sheet["!cols"]?.[col]?.hidden);
     let headerRow = -1;
     for (let row = range.s.r; row <= Math.min(range.e.r, range.s.r + 40); row += 1) {
       const values = visibleCols.map((col) => mergedValue(sheet, row, col));
-      if (values.some(isNameHeader) && values.some(isClassHeader)) { headerRow = row; break; }
+      if (values.some(isNameHeader) && values.some(isClassHeader)) {
+        headerRow = row;
+        break;
+      }
     }
     if (headerRow < 0) continue;
     const nameCol = visibleCols.find((col) => isNameHeader(mergedValue(sheet, headerRow, col)));
     const classCol = visibleCols.find((col) => isClassHeader(mergedValue(sheet, headerRow, col)));
     const numberCol = visibleCols.find((col) => isNumberHeader(mergedValue(sheet, headerRow, col)));
-    const totalCol = [...visibleCols].reverse().find((col) => isTotalHeader(mergedValue(sheet, headerRow, col)));
+    const totalCol = [...visibleCols]
+      .reverse()
+      .find((col) => isTotalHeader(mergedValue(sheet, headerRow, col)));
     if (nameCol === undefined || classCol === undefined || totalCol === undefined) continue;
-    const dataCols = visibleCols.filter((col) => col !== numberCol && col !== nameCol && col !== classCol);
+    const dataCols = visibleCols.filter(
+      (col) => col !== numberCol && col !== nameCol && col !== classCol,
+    );
     const sheetColumns = dataCols.map((col) => {
-      const label = text(mergedValue(sheet, headerRow, col)) || `Ustun ${XLSX.utils.encode_col(col)}`;
+      const label =
+        text(mergedValue(sheet, headerRow, col)) || `Ustun ${XLSX.utils.encode_col(col)}`;
       let group = "Natijalar";
       for (let row = Math.max(range.s.r, headerRow - 4); row < headerRow; row += 1) {
         const candidate = text(mergedValue(sheet, row, col));
-        if (candidate && !/haftalik|reyting|ballar|13\.|20\d{2}/i.test(candidate)) group = candidate;
+        if (candidate && !/haftalik|reyting|ballar|13\.|20\d{2}/i.test(candidate)) {
+          group = candidate;
+        }
       }
       const key = `${sheetName}:${XLSX.utils.encode_col(col)}`;
       return { key, label, group, sheetName, role: roleFor(label, group) } satisfies RatingColumn;
@@ -79,16 +97,40 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
     columns.push(...sheetColumns);
     for (let row = headerRow + 1; row <= range.e.r; row += 1) {
       const name = text(sheet[XLSX.utils.encode_cell({ r: row, c: nameCol })]?.v);
-      const className = text(sheet[XLSX.utils.encode_cell({ r: row, c: classCol })]?.v).replace(/\s/g, "").toUpperCase();
+      const className = text(sheet[XLSX.utils.encode_cell({ r: row, c: classCol })]?.v)
+        .replace(/\s/g, "")
+        .toUpperCase();
       if (!name || !/^\d{1,2}[A-ZА-Я]?$/.test(className)) continue;
       const total = Number(sheet[XLSX.utils.encode_cell({ r: row, c: totalCol })]?.v);
-      const rowStatuses = visibleCols.map((col) => colorKind(sheet[XLSX.utils.encode_cell({ r: row, c: col })]));
-      const status: StudentStatus = rowStatuses.includes("absent") ? "absent" : rowStatuses.includes("wrong-id") ? "wrong-id" : "normal";
-      const values = Object.fromEntries(dataCols.map((col) => {
-        const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
-        return [`${sheetName}:${XLSX.utils.encode_col(col)}`, cell?.w ?? cell?.v ?? ""];
-      }));
-      students.push({ rowNumber: row + 1, name, className, total: Number.isFinite(total) ? total : 0, status, sheetName, values });
+      const rowStatuses = visibleCols.map((col) =>
+        colorKind(sheet[XLSX.utils.encode_cell({ r: row, c: col })]),
+      );
+      const status: StudentStatus = rowStatuses.includes("absent")
+        ? "absent"
+        : rowStatuses.includes("wrong-id")
+          ? "wrong-id"
+          : "normal";
+      const values = Object.fromEntries(
+        dataCols.map((col) => {
+          const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
+          return [`${sheetName}:${XLSX.utils.encode_col(col)}`, cell?.w ?? cell?.v ?? ""];
+        }),
+      );
+      const cellStatuses: Record<string, StudentStatus> = {};
+      for (const col of dataCols) {
+        const kind = colorKind(sheet[XLSX.utils.encode_cell({ r: row, c: col })]);
+        if (kind) cellStatuses[`${sheetName}:${XLSX.utils.encode_col(col)}`] = kind;
+      }
+      students.push({
+        rowNumber: row + 1,
+        name,
+        className,
+        total: Number.isFinite(total) ? total : 0,
+        status,
+        sheetName,
+        values,
+        cellStatuses,
+      });
     }
     for (let row = range.s.r; row < headerRow && !date; row += 1) {
       for (const col of visibleCols) {
@@ -97,7 +139,9 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
       }
     }
   }
-  if (!students.length) throw new Error("5–8 yoki 9–11 umumiy reyting sahifalarida o‘quvchilar topilmadi.");
+  if (!students.length) {
+    throw new Error("5–8 yoki 9–11 umumiy reyting sahifalarida o‘quvchilar topilmadi.");
+  }
   return {
     fileName: file.name,
     date: date || new Date().toLocaleDateString("uz-UZ"),

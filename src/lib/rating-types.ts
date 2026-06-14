@@ -1,13 +1,6 @@
 export type StudentStatus = "normal" | "wrong-id" | "absent";
 
-export type ColumnRole =
-  | "id"
-  | "teacher"
-  | "subject"
-  | "result"
-  | "discipline"
-  | "total"
-  | "other";
+export type ColumnRole = "id" | "teacher" | "subject" | "result" | "discipline" | "total" | "other";
 
 export interface RatingColumn {
   key: string;
@@ -25,6 +18,7 @@ export interface RatingStudent {
   status: StudentStatus;
   sheetName: string;
   values: Record<string, string | number>;
+  cellStatuses?: Record<string, StudentStatus>;
 }
 
 export interface RatingWorkbook {
