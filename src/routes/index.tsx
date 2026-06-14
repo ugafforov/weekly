@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClientOnlyFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState, type ChangeEvent, type Ref } from "react";
 import { AlertTriangle, CheckCircle2, FileDown, FileSpreadsheet, ImageDown, LoaderCircle, Pencil, Upload, Users, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/")({
 const classSort = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 const scoreTone = (score: number) => score >= 8 ? "score-high" : score >= 5 ? "score-mid" : "score-low";
 const statusText = { normal: "Natija", "wrong-id": "ID xato kiritilgan", absent: "Imtihonda qatnashmagan" } as const;
+const loadWorkbookTools = createClientOnlyFn(() => import("@/lib/rating-workbook.client"));
 
 function RatingDashboard() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +34,7 @@ function RatingDashboard() {
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]; if (!file) return;
     setBusy("upload"); setError("");
-    try { const { parseRatingWorkbook } = await import("@/lib/rating-workbook.client"); const parsed = await parseRatingWorkbook(file); setWorkbook(parsed); setActiveClass("all"); }
+    try { const tools = await loadWorkbookTools(); if (!tools) return; const parsed = await tools.parseRatingWorkbook(file); setWorkbook(parsed); setActiveClass("all"); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Excel faylini o‘qib bo‘lmadi."); }
     finally { setBusy(undefined); event.target.value = ""; }
   }
@@ -48,7 +50,7 @@ function RatingDashboard() {
   }
   async function downloadExcel() {
     if (!workbook) return; setBusy("excel");
-    try { const { createSegmentedWorkbook } = await import("@/lib/rating-workbook.client"); const output = createSegmentedWorkbook(workbook, classes); const url = URL.createObjectURL(new Blob([output], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })); const link = document.createElement("a"); link.href = url; link.download = `Al-Xorazmiy-${workbook.date}.xlsx`; link.click(); URL.revokeObjectURL(url); }
+    try { const tools = await loadWorkbookTools(); if (!tools) return; const output = tools.createSegmentedWorkbook(workbook, classes); const url = URL.createObjectURL(new Blob([output], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })); const link = document.createElement("a"); link.href = url; link.download = `Al-Xorazmiy-${workbook.date}.xlsx`; link.click(); URL.revokeObjectURL(url); }
     finally { setBusy(undefined); }
   }
 
