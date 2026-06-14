@@ -445,7 +445,12 @@ function Report({
           </thead>
           <tbody>
             {students.map((student, index) => (
-              <StudentRow key={`${student.sheetName}-${student.rowNumber}`} student={student} index={index} columns={columns} />
+              <StudentRow
+                key={`${student.sheetName}-${student.rowNumber}`}
+                student={student}
+                index={index}
+                columns={columns}
+              />
             ))}
           </tbody>
         </table>
@@ -454,7 +459,15 @@ function Report({
   );
 }
 
-function StudentRow({ student, index, columns }: { student: RatingStudent; index: number; columns: RatingColumn[] }) {
+function StudentRow({
+  student,
+  index,
+  columns,
+}: {
+  student: RatingStudent;
+  index: number;
+  columns: RatingColumn[];
+}) {
   return (
     <tr>
       <td className="rank">{index + 1}</td>
@@ -465,7 +478,12 @@ function StudentRow({ student, index, columns }: { student: RatingStudent; index
         const cellStatus = student.cellStatuses?.[c.key];
         let cellClass = "";
         if (cellStatus === "absent") cellClass = "cell-absent";
-        else if (cellStatus === "wrong-id" || (student.status === "wrong-id" && c.role === "result")) cellClass = "cell-wrong";
+        else if (
+          cellStatus === "wrong-id" ||
+          (student.status === "wrong-id" && c.role === "result")
+        ) {
+          cellClass = "cell-wrong";
+        }
         else if (c.role === "total") cellClass = totalTone(student.total);
         else if (c.role === "result") cellClass = resultTone(value);
         return (
