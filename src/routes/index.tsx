@@ -54,7 +54,7 @@ function RatingDashboard() {
   const activeSheet = students[0]?.sheetName;
   const allColumns = useMemo(() => workbook?.columns.filter((c) => c.sheetName === activeSheet) ?? [], [workbook, activeSheet]);
   const columns = useMemo(
-    () => activeClass === "all" ? allColumns : allColumns.filter((c) => c.role !== "teacher"),
+    () => activeClass === "all" ? allColumns : allColumns.filter((c) => !isTeacherColumn(c)),
     [activeClass, allColumns],
   );
 
