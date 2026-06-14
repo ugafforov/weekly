@@ -88,7 +88,11 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
         const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
         return [`${sheetName}:${XLSX.utils.encode_col(col)}`, cell?.w ?? cell?.v ?? ""];
       }));
-      students.push({ rowNumber: row + 1, name, className, total: Number.isFinite(total) ? total : 0, status, sheetName, values });
+      const cellStatuses = Object.fromEntries(dataCols.flatMap((col) => {
+        const kind = colorKind(sheet[XLSX.utils.encode_cell({ r: row, c: col })]);
+        return kind ? [[`${sheetName}:${XLSX.utils.encode_col(col)}`, kind]] : [];
+      }));
+      students.push({ rowNumber: row + 1, name, className, total: Number.isFinite(total) ? total : 0, status, sheetName, values, cellStatuses });
     }
     for (let row = range.s.r; row < headerRow && !date; row += 1) {
       for (const col of visibleCols) {
