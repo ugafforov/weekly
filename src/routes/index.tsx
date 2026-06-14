@@ -104,12 +104,14 @@ function UploadScreen({ busy, error, onChoose }: { busy?: string; error: string;
 
 function Report({ ref, workbook, activeClass, students, columns, thirdSubject }: { ref: Ref<HTMLDivElement>; workbook: RatingWorkbook; activeClass: string; students: RatingStudent[]; columns: RatingColumn[]; thirdSubject: string }) {
   const isAll = activeClass === "all";
-  const groups = useMemo(() => [...new Set(columns.map((c) => c.group))], [columns]);
-  // For each subject-group, compute "N ta savol" from data: max(rounded(to'g'ri javoblar / (natija/100)))
+  const groupMeta = useMemo(() => [...new Set(columns.map((c) => c.group))].map((group) => ({ group, columns: columns.filter((c) => c.group === group) })), [columns]);
+  const subjectGroups = useMemo(
+    () => groupMeta.filter(({ group, columns: groupColumns }) => groupColumns.length > 1 && !/intizom|tarbiya|davomat|hafta|jami|umumiy|o['ʻ‘’` ]?rtacha/i.test(group)),
+    [groupMeta],
+  );
   const groupSavol = useMemo(() => {
     const result: Record<string, number> = {};
-    for (const group of groups) {
-      const cols = columns.filter((c) => c.group === group);
+    for (const { group, columns: cols } of groupMeta) {
       const javobCol = cols.find((c) => /to[' ʻ‘’`]?g[' ʻ‘’`]?ri.*javob/i.test(c.label));
       const natijaCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
       if (!javobCol || !natijaCol) continue;
@@ -122,19 +124,28 @@ function Report({ ref, workbook, activeClass, students, columns, thirdSubject }:
       if (max > 0 && max <= 50) result[group] = max;
     }
     return result;
-  }, [groups, columns, students]);
+  }, [groupMeta, students]);
 
-  return <section ref={ref} className={`print-area overflow-hidden rounded-2xl border border-border bg-card report-shadow ${isAll ? "" : "telegram-report"}`}>
-    <div className="report-head flex flex-col items-center justify-center gap-3 px-6 py-6">
-      <img src={logo} alt="Al-Xorazmiy School" className="h-16 w-auto object-contain" />
-      <div className="text-center">
-        <h2 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">HAFTALIK JAMG‘ARILGAN BALLAR</h2>
-        <p className="mt-1 text-sm font-bold text-primary">( {workbook.date} )</p>
-      </div>
+  const labelForGroup = (group: string) => {
+    const subjectIndex = subjectGroups.findIndex((item) => item.group === group);
+    const display = !isAll && subjectIndex === 2 && thirdSubject ? thirdSubject : group;
+    return display.toLocaleUpperCase("uz-UZ");
+  };
+  const isSingleTallHeader = (group: string, groupColumns: RatingColumn[]) =>
+    groupColumns.length === 1 && /o['ʻ‘’` ]?rtacha|haftalik|imtihon|\d+[- ]?hafta|jami|umumiy/i.test(`${group} ${groupColumns[0]?.label}`);
+
+  return <section ref={ref} className={`print-area overflow-hidden bg-card report-shadow ${isAll ? "rounded-2xl border border-border" : "telegram-report"}`}>
+    <div className="report-head">
+      <img src={logo} alt="Al-Xorazmiy School" />
+      <h2>HAFTALIK JAMG‘ARILGAN BALLAR</h2>
+      <p>( {workbook.date} )</p>
     </div>
-    {!isAll && <div className="legend flex flex-col gap-1.5 border-y border-border bg-card px-6 py-3 text-[12px] font-medium">
-      <span><i className="dot dot-wrong" /> Ushbu rang o‘quvchi o‘z <b>ID</b> raqamini xato kiritganini bildiradi.</span>
-      <span><i className="dot dot-absent" /> Ushbu rang o‘quvchi <b>imtihonda qatnashmaganini</b> bildiradi.</span>
+    {!isAll && <div className="legend">
+      <div className="legend-boxes"><i className="dot dot-wrong" /><i className="dot dot-absent" /></div>
+      <div className="legend-text">
+        <span>Ushbu rang o‘quvchi o‘z <b>ID</b> raqamini xato kiritganini bildiradi.</span>
+        <span>Ushbu rang o‘quvchi <b>Imtihonda qatnashmaganini</b> bildiradi</span>
+      </div>
     </div>}
     <div className={isAll ? "overflow-x-auto" : ""}>
       <table className="rating-table w-full border-collapse">
@@ -143,16 +154,18 @@ function Report({ ref, workbook, activeClass, students, columns, thirdSubject }:
             <th rowSpan={2} className="col-rank">№</th>
             <th rowSpan={2} className="name-col">FAMILIYA ISM</th>
             <th rowSpan={2} className="col-class">SINF</th>
-            {groups.map((group, index) => {
-              const display = !isAll && index === 2 && thirdSubject ? thirdSubject : group;
+            {groupMeta.map(({ group, columns: groupColumns }) => {
               const savol = !isAll ? groupSavol[group] : undefined;
-              return <th key={group} colSpan={columns.filter((c) => c.group === group).length}>
-                <div className="group-title">{display}</div>
+              if (isSingleTallHeader(group, groupColumns)) return <th key={group} rowSpan={2} className="single-head">{labelForGroup(groupColumns[0]?.label || group)}</th>;
+              return <th key={group} colSpan={groupColumns.length}>
+                <div className="group-title">{labelForGroup(group)}</div>
                 {savol && <div className="group-sub">({savol} TA SAVOL)</div>}
               </th>;
             })}
           </tr>
-          <tr className="label-row">{columns.map((c) => <th key={c.key}><span className={isAll ? "" : "label-rot"}>{c.label}</span></th>)}</tr>
+          <tr className="label-row">{groupMeta.flatMap(({ group, columns: groupColumns }) =>
+            isSingleTallHeader(group, groupColumns) ? [] : groupColumns.map((c) => <th key={c.key}><span className={isAll ? "" : "label-rot"}>{displayLabel(c.label)}</span></th>),
+          )}</tr>
         </thead>
         <tbody>{students.map((student, index) => <StudentRow key={`${student.sheetName}-${student.rowNumber}`} student={student} index={index} columns={columns} />)}</tbody>
       </table>
