@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
 });
 
 const classSort = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
-const totalTone = (score: number) => score >= 8 ? "score-high" : score >= 5 ? "score-mid" : "score-low";
+const totalTone = (score: number) => score >= 8 ? "score-high" : score >= 6 ? "score-mid" : score >= 4 ? "score-low" : "score-bad";
 const percentOf = (v: string | number | undefined) => {
   if (v === undefined || v === null || v === "") return null;
   const match = String(v).match(/(-?\d+(?:[.,]\d+)?)/);
@@ -22,7 +22,22 @@ const resultTone = (v: string | number | undefined) => {
   const p = percentOf(v);
   if (p === null) return "";
   if (p >= 50) return "score-high";
-  return "score-low";
+  if (p >= 40) return "score-mid";
+  if (p >= 25) return "score-low";
+  return "score-bad";
+};
+const isTeacherColumn = (c: RatingColumn) => /ustoz|o['ʻ‘’` ]?qituvchi|teacher/i.test(`${c.label} ${c.group}`) || c.role === "teacher";
+const displayLabel = (label: string) => {
+  const value = label.replace(/\s+/g, " ").trim();
+  if (/to['ʻ‘’` ]?g['ʻ‘’` ]?ri.*javob/i.test(value)) return "TO‘G‘RI JAVOBLAR";
+  if (/natija.*bal|bal/i.test(value)) return "BAL";
+  if (/natija|foiz/i.test(value)) return "NATIJASI";
+  if (/level|etap/i.test(value)) return "LEVEL (ETAP)";
+  if (/davomat/i.test(value)) return "DAVOMAT";
+  if (/kech/i.test(value)) return "KECH QOLMASLIK";
+  if (/vazifa/i.test(value)) return "UYGA VAZIFA";
+  if (/odob|axloq|ahloq/i.test(value)) return "ODOB-AXLOQ";
+  return value.toLocaleUpperCase("uz-UZ");
 };
 const loadWorkbookTools = createClientOnlyFn(() => import("@/lib/rating-workbook.client"));
 
