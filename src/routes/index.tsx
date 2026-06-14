@@ -399,6 +399,19 @@ function Report({
     return result;
   }, [groupMeta, students]);
 
+  const computeSavol = (cols: RatingColumn[]): number | undefined => {
+    const javobCol = cols.find((c) => /to[' ʻ''`]?g[' ʻ''`]?ri.*javob/i.test(c.label));
+    const natijaCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
+    if (!javobCol || !natijaCol) return undefined;
+    let max = 0;
+    for (const s of students) {
+      const j = percentOf(s.values[javobCol.key]);
+      const n = percentOf(s.values[natijaCol.key]);
+      if (j !== null && n !== null && n > 0) max = Math.max(max, Math.round((j / n) * 100));
+    }
+    return max > 0 && max <= 50 ? max : undefined;
+  };
+
   const labelForGroup = (group: string) => {
     const idx = subjectGroups.findIndex((item) => item.group === group);
     const display = !isAll && idx === 2 && thirdSubject ? thirdSubject : group;
@@ -418,31 +431,45 @@ function Report({
         return subjectGroups.map(({ group, columns: cols }) => {
           const resultCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
           const scoreCol  = cols.find((c) => /\bbal\b/i.test(c.label));
-          return { group, label: labelForGroup(group), savol: groupSavol[group], resultCol, scoreCol };
+          return { group, label: labelForGroup(group), savol: groupSavol[group], allCols: cols, resultCol, scoreCol };
         });
       }
 
       /* Case B — all subjects are inside one group (e.g. "Natijalar")
-         Scan every non-special column for (natija, bal) pairs           */
+         Group ALL columns per subject by finding natijasi cols as pivots  */
       const candidateCols = columns.filter(
         (c) => !specialPat.test(`${c.group} ${c.label}`) && !isTeacherColumn(c),
       );
-      const resultCols = candidateCols.filter(
-        (c) => /natija/i.test(c.label) || c.role === "result",
-      );
-      if (resultCols.length === 0) return [];
+      const resultColIdxs = candidateCols.reduce<number[]>((acc, c, i) => {
+        if (/natija/i.test(c.label) || c.role === "result") acc.push(i);
+        return acc;
+      }, []);
+      if (resultColIdxs.length === 0) return [];
 
-      return resultCols.map((resultCol, i) => {
-        const ri = candidateCols.indexOf(resultCol);
-        const scoreCol = candidateCols.slice(ri + 1).find((c) => /\bbal\b/i.test(c.label));
-        /* Extract subject name from column label by stripping "natijasi/foizi" suffix */
+      const subjects: SubjectDisplayCol[] = [];
+      let prevEnd = -1;
+      for (let si = 0; si < resultColIdxs.length; si++) {
+        const ri = resultColIdxs[si];
+        const resultCol = candidateCols[ri];
+        const nextRI = si + 1 < resultColIdxs.length ? resultColIdxs[si + 1] : candidateCols.length;
+        /* Find first "bal" column after result, before the next result col */
+        let balIdx = -1;
+        for (let j = ri + 1; j < nextRI; j++) {
+          if (/\bbal\b/i.test(candidateCols[j].label)) { balIdx = j; break; }
+        }
+        const end = balIdx >= 0 ? balIdx : ri;
+        const allCols = candidateCols.slice(prevEnd + 1, end + 1);
+        prevEnd = end;
+        const scoreCol = balIdx >= 0 ? candidateCols[balIdx] : undefined;
+        const savol = computeSavol(allCols);
         const stripped = resultCol.label.replace(/\s*(natijasi?|foizi?)\s*$/i, "").trim();
         const isGeneric = !stripped || /^natija$/i.test(stripped);
         const label = isGeneric
-          ? (i === 2 && thirdSubject ? thirdSubject.toLocaleUpperCase("uz-UZ") : `${i + 1}-FAN`)
+          ? (si === 2 && thirdSubject ? thirdSubject.toLocaleUpperCase("uz-UZ") : `${si + 1}-FAN`)
           : stripped.toLocaleUpperCase("uz-UZ");
-        return { group: resultCol.key, label, savol: undefined, resultCol, scoreCol };
-      });
+        subjects.push({ group: resultCol.key, label, savol, allCols, resultCol, scoreCol });
+      }
+      return subjects;
     })();
 
     // Discipline group
@@ -537,13 +564,14 @@ function Report({
   );
 }
 
-/* ─── Premium Class Report (Telegram export) ───────────────────── */
+/* ─── Premium Class Report (Telegram / PDF export) ─────────────── */
 type SubjectDisplayCol = {
   group: string;
   label: string;
   savol?: number;
-  resultCol?: RatingColumn;
-  scoreCol?: RatingColumn;
+  allCols: RatingColumn[];   /* ALL sub-columns for this subject (Level, ID, Javoblar, Natijasi, Bal) */
+  resultCol?: RatingColumn;  /* natijasi column — used for color coding */
+  scoreCol?: RatingColumn;   /* bal column */
 };
 
 function ClassReport({
@@ -558,15 +586,15 @@ function ClassReport({
   avgGroup?: { group: string; columns: RatingColumn[] };
   totalGroup?: { group: string; columns: RatingColumn[] };
 }) {
-  const avgCol = avgGroup?.columns[0];
+  const avgCol  = avgGroup?.columns[0];
   const totalCol = totalGroup?.columns[0];
-
-  const hasDisc = discCols.length > 0;
-  const hasAvg = Boolean(avgCol);
+  const hasDisc  = discCols.length > 0;
+  const hasAvg   = Boolean(avgCol);
   const hasTotal = Boolean(totalCol);
 
   return (
     <section ref={ref} className="cr-report print-area">
+
       {/* ── Header ── */}
       <div className="cr-head">
         <img src={logo} alt="Al-Xorazmiy School" className="cr-logo" />
@@ -589,130 +617,115 @@ function ClassReport({
         </div>
       </div>
 
-      {/* ── Column headers ── */}
-      <div className="cr-thead">
-        <div className="cr-th cr-th-rank">№</div>
-        <div className="cr-th cr-th-name">O'QUVCHI</div>
-        {subjectDisplayCols.map((s) => (
-          <div key={s.group} className="cr-th cr-th-subj">
-            <span className="cr-subj-name">{s.label}</span>
-            {s.savol && <span className="cr-subj-savol">{s.savol} savol</span>}
-          </div>
-        ))}
-        {hasAvg && <div className="cr-th cr-th-avg">O'RTACHA<br />IMTIXON</div>}
-        {hasDisc && (
-          <div className="cr-th cr-th-disc">
-            <span>INTIZOM</span>
-            <div className="cr-disc-labels">
-              {discCols.map((c) => <span key={c.key}>{discShort(c.label)}</span>)}
-            </div>
-          </div>
-        )}
-        {hasTotal && <div className="cr-th cr-th-total">JAMI</div>}
-      </div>
-
-      {/* ── Student rows ── */}
-      <div className="cr-tbody">
-        {students.map((student, idx) => {
-          /* Standard competition rank: 1 + count of students with strictly higher total
-             Ties share the same rank:  10,10,8.5,8.5,8.5 → 1,1,3,3,3          */
-          const rank = 1 + students.filter((s) => s.total > student.total).length;
-          const isTopThree = rank <= 3;
-          const rankClass = rank === 1 ? "cr-gold" : rank === 2 ? "cr-silver" : rank === 3 ? "cr-bronze" : "";
-
-          return (
-            <div
-              key={`${student.sheetName}-${student.name}-${idx}`}
-              className={`cr-row ${idx % 2 === 0 ? "cr-row-even" : "cr-row-odd"} ${isTopThree ? "cr-row-top" : ""}`}
-            >
-              {/* Rank */}
-              <div className="cr-td cr-td-rank">
-                <span className={`cr-rank-badge ${rankClass}`}>{rank}</span>
-              </div>
-
-              {/* Name */}
-              <div className="cr-td cr-td-name">
-                <span className="cr-student-name">{student.name}</span>
-              </div>
-
-              {/* Subject cells */}
-              {subjectDisplayCols.map((s) => {
-                const pctRaw  = s.resultCol ? student.values[s.resultCol.key] : undefined;
-                const scoreRaw = s.scoreCol ? student.values[s.scoreCol.key] : undefined;
-                const cellStatus = s.resultCol ? student.cellStatuses?.[s.resultCol.key] : undefined;
-                const isAbsent = cellStatus === "absent";
-                const isWrong  = cellStatus === "wrong-id" || (student.status === "wrong-id" && s.resultCol?.role === "result");
-
-                /* Determine if the natija value is already a percentage string ("67%") */
-                const isPctStr = String(pctRaw ?? "").includes("%");
-                const pct      = isPctStr ? percentOf(pctRaw) : null;
-
-                /* Color: use % string if available, else fall back to bal-based coloring */
-                let toneName = "";
-                if (isAbsent) toneName = "cr-cell-absent";
-                else if (isWrong) toneName = "cr-cell-wrong";
-                else if (isPctStr) toneName = resultTone(pctRaw) ? `cr-cell-${resultTone(pctRaw).replace("score-", "")}` : "";
-                else {
-                  const score = percentOf(scoreRaw);
-                  if (score !== null) {
-                    toneName = score >= 5 ? "cr-cell-high" : score >= 3.5 ? "cr-cell-mid" : score >= 2 ? "cr-cell-low" : score > 0 ? "cr-cell-bad" : "cr-cell-absent";
-                  }
-                }
-
-                const isEmpty = (pctRaw === "" || pctRaw === undefined) && (scoreRaw === "" || scoreRaw === undefined);
-
-                return (
-                  <div key={s.group} className={`cr-td cr-td-subj ${toneName}`}>
-                    {isAbsent || isEmpty ? (
-                      <span className="cr-absent-text">—</span>
-                    ) : (
-                      <>
-                        <span className="cr-pct-val">{pctRaw !== "" && pctRaw !== undefined ? pctRaw : "—"}</span>
-                        {pct !== null && (
-                          <div className="cr-pct-bar">
-                            <div className="cr-pct-fill" style={{ width: `${Math.min(100, pct)}%` }} />
-                          </div>
-                        )}
-                        <span className="cr-score-val">{scoreRaw !== "" && scoreRaw !== undefined ? `bal: ${scoreRaw}` : ""}</span>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Average */}
-              {hasAvg && avgCol && (
-                <div className="cr-td cr-td-avg">
-                  <span className="cr-avg-num">{student.values[avgCol.key] ?? "—"}</span>
-                </div>
+      {/* ── Table ── */}
+      <div className="overflow-x-auto">
+        <table className="rating-table cr-table w-full border-collapse">
+          <thead>
+            {/* Row 1 — group headers */}
+            <tr className="group-row">
+              <th rowSpan={2} className="col-rank">№</th>
+              <th rowSpan={2} className="name-col">FAMILIYA ISM</th>
+              {subjectDisplayCols.map((s) => (
+                <th key={s.group} colSpan={s.allCols.length}>
+                  <div className="group-title">{s.label}</div>
+                  {s.savol && <div className="group-sub">({s.savol} TA SAVOL)</div>}
+                </th>
+              ))}
+              {hasAvg && (
+                <th rowSpan={2} className="single-head">
+                  O'RTACHA<br />HAFTALIK<br />IMTIXON BALI
+                </th>
               )}
-
-              {/* Discipline */}
               {hasDisc && (
-                <div className="cr-td cr-td-disc">
-                  {discCols.map((c) => {
+                <th colSpan={discCols.length}>
+                  <div className="group-title">TARTIB INTIZOM BALLARI</div>
+                </th>
+              )}
+              {hasTotal && (
+                <th rowSpan={2} className="single-head">
+                  {(totalCol?.label ?? "JAMI").toLocaleUpperCase("uz-UZ")}
+                </th>
+              )}
+            </tr>
+            {/* Row 2 — sub-column labels (rotated) */}
+            <tr className="label-row">
+              {subjectDisplayCols.flatMap((s) =>
+                s.allCols.map((c) => (
+                  <th key={c.key}><span className="label-rot">{displayLabel(c.label)}</span></th>
+                ))
+              )}
+              {hasDisc && discCols.map((c) => (
+                <th key={c.key}><span className="label-rot">{displayLabel(c.label)}</span></th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {students.map((student, index) => {
+              /* Standard competition rank: ties share the same rank (1,1,3,3,3,6…) */
+              const rank = 1 + students.filter((s) => s.total > student.total).length;
+              const rankCls = rank === 1 ? "rank-top cr-rank-gold" : rank === 2 ? "rank-top cr-rank-silver" : rank === 3 ? "rank-top cr-rank-bronze" : "";
+
+              return (
+                <tr
+                  key={`${student.sheetName}-${student.name}-${index}`}
+                  className={index % 2 === 0 ? "row-even" : "row-odd"}
+                >
+                  {/* Rank */}
+                  <td className="rank">
+                    {rankCls
+                      ? <span className={rankCls}>{rank}</span>
+                      : <span>{rank}</span>}
+                  </td>
+
+                  {/* Name */}
+                  <td className="student-name">{student.name}</td>
+
+                  {/* Subject sub-columns — every column in each subject group */}
+                  {subjectDisplayCols.flatMap((s) =>
+                    s.allCols.map((c) => {
+                      const value = student.values[c.key];
+                      const cs    = student.cellStatuses?.[c.key];
+                      let cellClass = "";
+                      if (cs === "absent") cellClass = "cell-absent";
+                      else if (cs === "wrong-id" || (student.status === "wrong-id" && c.key === s.resultCol?.key)) cellClass = "cell-wrong";
+                      else if (c.key === s.resultCol?.key) cellClass = resultTone(value);
+                      return (
+                        <td key={c.key} className={cellClass}>
+                          {value === "" || value === undefined
+                            ? <span className="text-dash-muted/40">—</span>
+                            : value}
+                        </td>
+                      );
+                    })
+                  )}
+
+                  {/* O'rtacha haftalik imtixon bali */}
+                  {hasAvg && avgCol && (
+                    <td>{student.values[avgCol.key] ?? "—"}</td>
+                  )}
+
+                  {/* Tartib-intizom columns */}
+                  {hasDisc && discCols.map((c) => {
                     const v = student.values[c.key];
-                    const ok = v !== undefined && v !== "" && Number(v) !== 0;
                     return (
-                      <div key={c.key} className="cr-disc-col">
-                        <span className={`cr-disc-chip ${ok ? "cr-disc-ok" : "cr-disc-miss"}`}>
-                          {ok ? "✓" : "✗"}
-                        </span>
-                      </div>
+                      <td key={c.key}>
+                        {v === "" || v === undefined ? <span className="text-dash-muted/40">—</span> : v}
+                      </td>
                     );
                   })}
-                </div>
-              )}
 
-              {/* Total */}
-              {hasTotal && totalCol && (
-                <div className={`cr-td cr-td-total cr-total-${totalTone(student.total)}`}>
-                  <span className="cr-total-num">{student.values[totalCol.key] ?? student.total}</span>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                  {/* Jami (4-hafta) */}
+                  {hasTotal && totalCol && (
+                    <td className={totalTone(student.total)}>
+                      {student.values[totalCol.key] ?? student.total}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* ── Footer ── */}

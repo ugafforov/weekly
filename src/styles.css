@@ -756,6 +756,16 @@
     border-top: 1px solid #e4eceb;
     font-size: 0.65rem; color: #7a9490; font-weight: 600;
   }
+
+  /* ── Class report table (overrides rating-table fixed layout) ── */
+  .cr-table { table-layout: auto; font-family: "DM Sans", ui-sans-serif, sans-serif; }
+  .cr-table .name-col { width: auto; min-width: 14rem; text-align: left; }
+  .cr-table .student-name { text-align: left; padding-left: 0.5rem; }
+
+  /* Rank badge with medal colors */
+  .cr-rank-gold   { background: #fef3c7; color: #92400e; border: 1.5px solid #f59e0b; }
+  .cr-rank-silver { background: #f1f5f9; color: #475569; border: 1.5px solid #94a3b8; }
+  .cr-rank-bronze { background: #fef0e7; color: #92400e; border: 1.5px solid #d97706; }
 }
 
 @media print {
