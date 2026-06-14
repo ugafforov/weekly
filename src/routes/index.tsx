@@ -60,8 +60,10 @@ function RatingDashboard() {
     if (!workbook) return;
     setBusy("excel");
     try {
-      const [{ createSegmentedWorkbook }, XLSX] = await Promise.all([import("@/lib/rating-workbook.client"), import("xlsx-js-style")]);
-      XLSX.writeFile(new Uint8Array(createSegmentedWorkbook(workbook, classes)), `Al-Xorazmiy-${workbook.date}-ratings.xlsx`);
+      const { createSegmentedWorkbook } = await import("@/lib/rating-workbook.client");
+      const output = createSegmentedWorkbook(workbook, classes);
+      const url = URL.createObjectURL(new Blob([output], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const link = document.createElement("a"); link.href = url; link.download = `Al-Xorazmiy-${workbook.date}-ratings.xlsx`; link.click(); URL.revokeObjectURL(url);
     } finally { setBusy(undefined); }
   }
 
