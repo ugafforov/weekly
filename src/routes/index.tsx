@@ -84,21 +84,23 @@ const loadWorkbookTools = createClientOnlyFn(() => import("@/lib/rating-workbook
 function makeDemoWorkbook(): RatingWorkbook {
   const mkCol = (key: string, label: string, group: string, role: RatingColumn["role"]): RatingColumn =>
     ({ key, label, group, role, sheetName: "5A" });
+  /* Mirrors real Excel structure: subjects under one "Natijalar" group,
+     with generic column labels "Natijasi" and "Bal" per subject          */
   const columns: RatingColumn[] = [
-    mkCol("ing_lvl","Level (Etap)","INGLIZ TILI","other"),
-    mkCol("ing_jav","To'g'ri javoblar","INGLIZ TILI","other"),
-    mkCol("ing_nat","Natijasi","INGLIZ TILI","result"),
-    mkCol("ing_bal","Bal","INGLIZ TILI","subject"),
-    mkCol("mat_lvl","Level (Etap)","MATEMATIKA","other"),
-    mkCol("mat_id","ID","MATEMATIKA","id"),
-    mkCol("mat_jav","To'g'ri javoblar","MATEMATIKA","other"),
-    mkCol("mat_nat","Natijasi","MATEMATIKA","result"),
-    mkCol("mat_bal","Bal","MATEMATIKA","subject"),
+    mkCol("ing_lvl","Level (Etap)","Natijalar","other"),
+    mkCol("ing_jav","To'g'ri javoblar","Natijalar","other"),
+    mkCol("ing_nat","Ingliz tili natijasi","Natijalar","result"),
+    mkCol("ing_bal","Ingliz tili bali","Natijalar","other"),
+    mkCol("mat_lvl","Level (Etap)","Natijalar","other"),
+    mkCol("mat_id","ID","Natijalar","id"),
+    mkCol("mat_jav","To'g'ri javoblar","Natijalar","other"),
+    mkCol("mat_nat","Matematika natijasi","Natijalar","result"),
+    mkCol("mat_bal","Matematika bali","Natijalar","other"),
     mkCol("avg","O'rtacha haftalik imtixon bali","O'RTACHA HAFTALIK IMTIXON BALI","other"),
-    mkCol("tar_id","ID","TARIX","id"),
-    mkCol("tar_jav","To'g'ri javoblar","TARIX","other"),
-    mkCol("tar_nat","Natijasi","TARIX","result"),
-    mkCol("tar_bal","Bal","TARIX","subject"),
+    mkCol("tar_id","ID","Natijalar","id"),
+    mkCol("tar_jav","To'g'ri javoblar","Natijalar","other"),
+    mkCol("tar_nat","Tarix natijasi","Natijalar","result"),
+    mkCol("tar_bal","Tarix bali","Natijalar","other"),
     mkCol("dav","Davomat","TARTIB INTIZOM BALLARI","discipline"),
     mkCol("kech","Kech qolmaslik","TARTIB INTIZOM BALLARI","discipline"),
     mkCol("vaz","Uyga vazifa","TARTIB INTIZOM BALLARI","discipline"),
@@ -405,12 +407,43 @@ function Report({
 
   /* ── Single-class premium card report ── */
   if (!isAll) {
-    // Build subject display columns
-    const subjectDisplayCols = subjectGroups.map(({ group, columns: cols }) => {
-      const resultCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
-      const scoreCol = cols.find((c) => /\bbal\b/i.test(c.label));
-      return { group, label: labelForGroup(group), savol: groupSavol[group], resultCol, scoreCol };
-    });
+    /* Build subject display columns — handles two Excel structures:
+       A) Each subject has its own column group  (INGLIZ TILI, MATEMATIKA, …)
+       B) All subjects share one group            (Natijalar / default fallback)   */
+    const specialPat = /intizom|tarbiya|davomat|hafta|jami|umumiy|o['ʻ'']?rtacha/i;
+
+    const subjectDisplayCols: SubjectDisplayCol[] = (() => {
+      /* Case A — subjects are in separate multi-col groups */
+      if (subjectGroups.length >= 2) {
+        return subjectGroups.map(({ group, columns: cols }) => {
+          const resultCol = cols.find((c) => c.role === "result" || /natija/i.test(c.label));
+          const scoreCol  = cols.find((c) => /\bbal\b/i.test(c.label));
+          return { group, label: labelForGroup(group), savol: groupSavol[group], resultCol, scoreCol };
+        });
+      }
+
+      /* Case B — all subjects are inside one group (e.g. "Natijalar")
+         Scan every non-special column for (natija, bal) pairs           */
+      const candidateCols = columns.filter(
+        (c) => !specialPat.test(`${c.group} ${c.label}`) && !isTeacherColumn(c),
+      );
+      const resultCols = candidateCols.filter(
+        (c) => /natija/i.test(c.label) || c.role === "result",
+      );
+      if (resultCols.length === 0) return [];
+
+      return resultCols.map((resultCol, i) => {
+        const ri = candidateCols.indexOf(resultCol);
+        const scoreCol = candidateCols.slice(ri + 1).find((c) => /\bbal\b/i.test(c.label));
+        /* Extract subject name from column label by stripping "natijasi/foizi" suffix */
+        const stripped = resultCol.label.replace(/\s*(natijasi?|foizi?)\s*$/i, "").trim();
+        const isGeneric = !stripped || /^natija$/i.test(stripped);
+        const label = isGeneric
+          ? (i === 2 && thirdSubject ? thirdSubject.toLocaleUpperCase("uz-UZ") : `${i + 1}-FAN`)
+          : stripped.toLocaleUpperCase("uz-UZ");
+        return { group: resultCol.key, label, savol: undefined, resultCol, scoreCol };
+      });
+    })();
 
     // Discipline group
     const discGroup = groupMeta.find(({ group }) => /intizom|tarbiya/i.test(group));
@@ -581,8 +614,11 @@ function ClassReport({
       {/* ── Student rows ── */}
       <div className="cr-tbody">
         {students.map((student, idx) => {
-          const isTopThree = idx < 3;
-          const rankClass = idx === 0 ? "cr-gold" : idx === 1 ? "cr-silver" : idx === 2 ? "cr-bronze" : "";
+          /* Standard competition rank: 1 + count of students with strictly higher total
+             Ties share the same rank:  10,10,8.5,8.5,8.5 → 1,1,3,3,3          */
+          const rank = 1 + students.filter((s) => s.total > student.total).length;
+          const isTopThree = rank <= 3;
+          const rankClass = rank === 1 ? "cr-gold" : rank === 2 ? "cr-silver" : rank === 3 ? "cr-bronze" : "";
 
           return (
             <div
@@ -591,7 +627,7 @@ function ClassReport({
             >
               {/* Rank */}
               <div className="cr-td cr-td-rank">
-                <span className={`cr-rank-badge ${rankClass}`}>{idx + 1}</span>
+                <span className={`cr-rank-badge ${rankClass}`}>{rank}</span>
               </div>
 
               {/* Name */}
@@ -601,17 +637,33 @@ function ClassReport({
 
               {/* Subject cells */}
               {subjectDisplayCols.map((s) => {
-                const pctRaw = s.resultCol ? student.values[s.resultCol.key] : undefined;
+                const pctRaw  = s.resultCol ? student.values[s.resultCol.key] : undefined;
                 const scoreRaw = s.scoreCol ? student.values[s.scoreCol.key] : undefined;
                 const cellStatus = s.resultCol ? student.cellStatuses?.[s.resultCol.key] : undefined;
                 const isAbsent = cellStatus === "absent";
-                const isWrong = cellStatus === "wrong-id" || (student.status === "wrong-id" && s.resultCol?.role === "result");
-                const tone = isAbsent ? "cr-cell-absent" : isWrong ? "cr-cell-wrong" : resultTone(pctRaw) ? `cr-cell-${resultTone(pctRaw).replace("score-", "")}` : "";
-                const pct = percentOf(pctRaw);
+                const isWrong  = cellStatus === "wrong-id" || (student.status === "wrong-id" && s.resultCol?.role === "result");
+
+                /* Determine if the natija value is already a percentage string ("67%") */
+                const isPctStr = String(pctRaw ?? "").includes("%");
+                const pct      = isPctStr ? percentOf(pctRaw) : null;
+
+                /* Color: use % string if available, else fall back to bal-based coloring */
+                let toneName = "";
+                if (isAbsent) toneName = "cr-cell-absent";
+                else if (isWrong) toneName = "cr-cell-wrong";
+                else if (isPctStr) toneName = resultTone(pctRaw) ? `cr-cell-${resultTone(pctRaw).replace("score-", "")}` : "";
+                else {
+                  const score = percentOf(scoreRaw);
+                  if (score !== null) {
+                    toneName = score >= 5 ? "cr-cell-high" : score >= 3.5 ? "cr-cell-mid" : score >= 2 ? "cr-cell-low" : score > 0 ? "cr-cell-bad" : "cr-cell-absent";
+                  }
+                }
+
+                const isEmpty = (pctRaw === "" || pctRaw === undefined) && (scoreRaw === "" || scoreRaw === undefined);
 
                 return (
-                  <div key={s.group} className={`cr-td cr-td-subj ${tone}`}>
-                    {isAbsent ? (
+                  <div key={s.group} className={`cr-td cr-td-subj ${toneName}`}>
+                    {isAbsent || isEmpty ? (
                       <span className="cr-absent-text">—</span>
                     ) : (
                       <>

@@ -1,0 +1,2 @@
+- [Excel column grouping](excel-column-grouping.md) — real Excel defaults all subject cols to group "Natijalar"; ClassReport must handle both per-subject-group and all-in-one-group structures.
+- [ClassReport subject detection](classreport-subjects.md) — uses two-path detection: ≥2 multi-col groups → per-group; else → scan all non-special result cols for (natija, bal) pairs.
