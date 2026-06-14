@@ -210,25 +210,26 @@
   .report-head {
     background: linear-gradient(120deg, var(--card), color-mix(in oklab, var(--accent) 52%, var(--card)));
   }
-  .telegram-report { min-width: 1040px; }
+  .telegram-report { width: 100%; }
+  .rating-table { table-layout: auto; }
   .rating-table th, .rating-table td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); text-align: center; }
   .rating-table th:last-child, .rating-table td:last-child { border-right: 0; }
-  .rating-table .group-row th { background: var(--primary); color: var(--primary-foreground); padding: 0.75rem 0.55rem; font-weight: 800; letter-spacing: 0.025em; }
-  .rating-table .label-row th { background: var(--secondary); color: var(--secondary-foreground); padding: 0.6rem 0.45rem; font-weight: 800; max-width: 8rem; }
-  .rating-table td { padding: 0.62rem 0.55rem; font-weight: 650; white-space: nowrap; }
-  .rating-table tbody tr:nth-child(even):not(.row-wrong):not(.row-absent) { background: color-mix(in oklab, var(--muted) 45%, var(--card)); }
-  .rating-table .name-col { min-width: 15rem; text-align: left; }
-  .rating-table .student-name { min-width: 15rem; text-align: left; font-size: 0.78rem; }
-  .student-name span, .student-name small { display: block; }
-  .student-name small { margin-top: 0.15rem; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
-  .rating-table .rank { width: 3rem; font-family: var(--font-heading); font-weight: 850; }
-  .rating-table .row-wrong { background: var(--amber-soft); color: var(--amber-foreground); }
-  .rating-table .row-absent { background: var(--slate-soft); color: var(--slate-foreground); }
-  .rating-table .score-high { background: var(--sage); color: var(--sage-foreground); font-size: 0.85rem; font-weight: 900; }
-  .rating-table .score-mid { background: var(--amber-soft); color: var(--amber-foreground); font-size: 0.85rem; font-weight: 900; }
-  .rating-table .score-low { background: var(--coral-soft); color: var(--coral-foreground); font-size: 0.85rem; font-weight: 900; }
-  .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
-  .legend .dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 999px; }
+  .rating-table .group-row th { background: var(--primary); color: var(--primary-foreground); padding: 0.55rem 0.3rem; font-weight: 800; letter-spacing: 0.04em; font-size: 0.72rem; line-height: 1.15; text-transform: uppercase; }
+  .rating-table .group-row th small { display: block; font-size: 0.58rem; font-weight: 700; opacity: 0.85; margin-top: 0.15rem; letter-spacing: 0.05em; }
+  .rating-table .label-row th { background: color-mix(in oklab, var(--primary) 18%, var(--card)); color: var(--foreground); padding: 0.5rem 0.25rem; font-weight: 800; font-size: 0.6rem; line-height: 1.15; text-transform: uppercase; letter-spacing: 0.04em; }
+  .rating-table td { padding: 0.42rem 0.3rem; font-weight: 600; font-size: 0.72rem; white-space: nowrap; }
+  .rating-table tbody tr:nth-child(even):not(.row-absent) td:not(.cell-wrong):not(.score-high):not(.score-mid):not(.score-low) { background: color-mix(in oklab, var(--muted) 40%, var(--card)); }
+  .rating-table .name-col { min-width: 12rem; text-align: left; }
+  .rating-table .student-name { min-width: 12rem; text-align: left; font-size: 0.74rem; font-weight: 700; padding-left: 0.6rem; }
+  .rating-table .rank { width: 2.2rem; font-family: var(--font-heading); font-weight: 850; color: var(--muted-foreground); }
+  .rating-table .class-col { width: 3rem; font-weight: 800; }
+  .rating-table .row-absent td { background: color-mix(in oklab, var(--slate-foreground) 28%, var(--card)) !important; color: var(--card); font-weight: 700; }
+  .rating-table .cell-wrong { background: oklch(0.78 0.16 60) !important; color: oklch(0.25 0.08 60) !important; font-weight: 800; }
+  .rating-table .score-high { background: var(--sage); color: var(--sage-foreground); font-weight: 900; }
+  .rating-table .score-mid { background: var(--amber-soft); color: var(--amber-foreground); font-weight: 900; }
+  .rating-table .score-low { background: var(--coral-soft); color: var(--coral-foreground); font-weight: 900; }
+  .legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .legend .dot { display: inline-block; width: 1.1rem; height: 0.75rem; border-radius: 0.2rem; border: 1px solid var(--border); }
 }
 
 @media print {
