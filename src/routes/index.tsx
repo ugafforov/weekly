@@ -64,6 +64,76 @@ const pctSum = (s: NormalizedStudent) =>
 const rankSort = (a: NormalizedStudent, b: NormalizedStudent) =>
   b.total - a.total || pctSum(b) - pctSum(a);
 
+/** Correctness ratio (correct/totalQ, falling back to percent). */
+const subjectRatio = (s: SubjectResult): number | null =>
+  s.correct !== null
+    ? s.correct / s.totalQuestions
+    : s.percent !== null
+    ? s.percent / 100
+    : null;
+
+/** A subject is in the "red zone" when the student sat it but scored below 50% correct. */
+const isRedZone = (s: SubjectResult): boolean => {
+  if (!s.present) return false;
+  const ratio = subjectRatio(s);
+  return ratio !== null && ratio < 0.5;
+};
+
+/** First letter upper, rest lower (uz locale). "INGLIZ TILI" → "Ingliz tili". */
+const titleCase = (s: string) =>
+  s ? s.charAt(0).toLocaleUpperCase("uz-UZ") + s.slice(1).toLocaleLowerCase("uz-UZ") : s;
+
+interface RedRow {
+  name: string;
+  className: string;
+  group: string; // section header (subject, uppercase)
+  fan: string; // FAN cell label
+  teacher?: string; // USTOZ (5-8)
+  blok?: string; // BLOK (9-11)
+  correct: number | null;
+  natija: string; // "47%" or "18.6%"
+}
+
+/** Build red-zone rows for one sheet kind, grouped by subject. */
+function buildRedRows(students: NormalizedStudent[], kind: "5-8" | "9-11"): RedRow[] {
+  const rows: RedRow[] = [];
+  for (const st of students) {
+    if (st.kind !== kind) continue;
+    for (const sub of st.subjects) {
+      if (!isRedZone(sub)) continue;
+      if (kind === "5-8") {
+        rows.push({
+          name: st.name,
+          className: st.className,
+          group: sub.label,
+          fan: titleCase(sub.label),
+          teacher: sub.teacher,
+          correct: sub.correct,
+          natija: sub.resultText,
+        });
+      } else {
+        const fan = sub.subjectName?.trim() || sub.label;
+        rows.push({
+          name: st.name,
+          className: st.className,
+          group: fan.toLocaleUpperCase("uz-UZ"),
+          fan: titleCase(fan),
+          blok: sub.label.toLocaleLowerCase("uz-UZ"),
+          correct: sub.correct,
+          natija: sub.resultText.endsWith("%") ? sub.resultText : `${sub.resultText}%`,
+        });
+      }
+    }
+  }
+  // Group alphabetically; within a group sort by class then name.
+  return rows.sort(
+    (a, b) =>
+      a.group.localeCompare(b.group, "uz") ||
+      classSort(a.className, b.className) ||
+      a.name.localeCompare(b.name, "uz"),
+  );
+}
+
 const TONE: Record<Tone, { bg: string; border: string; fg: string; sub: string; bar: string }> = {
   high: { bg: "#e9f9f0", border: "#b6ebcf", fg: "#047857", sub: "#0f9d6b", bar: "#16a34a" },
   mid: { bg: "#fff5e6", border: "#ffdfb0", fg: "#b45309", sub: "#c97a10", bar: "#f59e0b" },
@@ -84,6 +154,11 @@ function makeDemoWorkbook(): RatingWorkbook {
     level = "2",
   ): SubjectResult => ({
     label,
+    teacher: /ingliz/i.test(label)
+      ? "Raximova Nigora"
+      : /matem/i.test(label)
+      ? "Yodgorov Axmadjon"
+      : "Salohiddionov Otabek",
     percent,
     resultText: present ? `${percent}%` : "—",
     correct,
@@ -197,6 +272,15 @@ function RatingDashboard() {
   );
 
   const thirdSubject = thirdSubjects[activeClass] ?? "";
+
+  const redZoneCount = useMemo(
+    () =>
+      (workbook?.students ?? []).reduce(
+        (acc, s) => acc + s.subjects.filter(isRedZone).length,
+        0,
+      ),
+    [workbook],
+  );
 
   async function processFile(file: File) {
     setBusy("upload");
@@ -543,7 +627,7 @@ function RatingDashboard() {
             <span className="dash-badge">{workbook.date}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {activeClass !== "all" && (
+            {activeClass !== "all" && activeClass !== "red" && (
               <label className="dash-input-label">
                 <Pencil className="size-3.5 text-primary" />
                 <span className="text-xs font-semibold text-dash-muted">3-fan:</span>
@@ -599,10 +683,21 @@ function RatingDashboard() {
               <span className="class-tab-count">{classCounts[name] ?? 0}</span>
             </button>
           ))}
+          <button
+            className={`class-tab ${activeClass === "red" ? "class-tab-active" : ""}`}
+            onClick={() => setActiveClass("red")}
+            style={activeClass === "red" ? undefined : { color: "#b91c1c" }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: 9999, background: "#dc2626", display: "inline-block" }} />
+            Qizil hudud
+            <span className="class-tab-count">{redZoneCount}</span>
+          </button>
         </nav>
 
         {activeClass === "all" ? (
           <Leaderboard students={students} />
+        ) : activeClass === "red" ? (
+          <RedZoneReport ref={reportRef} date={workbook.date} students={workbook.students} />
         ) : (
           <ClassReport
             ref={reportRef}
@@ -614,6 +709,172 @@ function RatingDashboard() {
         )}
       </div>
     </main>
+  );
+}
+
+/* ─── Red-zone report (below-50% students, grouped by subject) ──── */
+function RedZoneReport({
+  ref,
+  date,
+  students,
+}: {
+  ref: Ref<HTMLDivElement>;
+  date: string;
+  students: NormalizedStudent[];
+}) {
+  const rows58 = useMemo(() => buildRedRows(students, "5-8"), [students]);
+  const rows911 = useMemo(() => buildRedRows(students, "9-11"), [students]);
+
+  const empty = rows58.length === 0 && rows911.length === 0;
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        background: "#ffffff",
+        padding: "0",
+        width: "880px",
+        boxSizing: "border-box",
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: "26px",
+        borderRadius: "10px",
+        overflow: "hidden",
+        boxShadow: "0 1px 3px rgba(15,23,42,0.12)",
+      }}
+    >
+      {empty ? (
+        <div style={{ padding: "48px", textAlign: "center", color: "#64748b", fontSize: "15px", fontWeight: 600 }}>
+          Qizil hududga tushgan o'quvchilar yo'q. 🎉
+        </div>
+      ) : (
+        <>
+          {rows58.length > 0 && (
+            <RedZoneTable
+              title={`${date} — QIZIL HUDUDGA TUSHGAN O'QUVCHILAR (5–8-SINFLAR)`}
+              rows={rows58}
+              kind="5-8"
+            />
+          )}
+          {rows911.length > 0 && (
+            <RedZoneTable
+              title={`${date} — QIZIL HUDUDGA TUSHGAN O'QUVCHILAR (9–11-SINFLAR)`}
+              rows={rows911}
+              kind="9-11"
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function RedZoneTable({
+  title,
+  rows,
+  kind,
+}: {
+  title: string;
+  rows: RedRow[];
+  kind: "5-8" | "9-11";
+}) {
+  const is58 = kind === "5-8";
+  const GRID = is58
+    ? "52px 1fr 64px 150px 210px 132px 86px"
+    : "52px 1fr 64px 176px 104px 132px 86px";
+  const headers = is58
+    ? ["T/R", "FAMILIYA ISM", "SINF", "FAN", "USTOZ", "TO'G'RI JAVOB", "NATIJA"]
+    : ["T/R", "FAMILIYA ISM", "SINF", "FAN", "BLOK", "TO'G'RI JAVOB", "NATIJA"];
+
+  const cell: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    padding: "8px 12px",
+    fontSize: "12.5px",
+    color: "#1e293b",
+    borderRight: "1px solid #e2e8f0",
+    boxSizing: "border-box",
+    minWidth: 0,
+  };
+  const hCell: React.CSSProperties = {
+    ...cell,
+    color: "#e2e8f0",
+    fontWeight: 800,
+    fontSize: "11px",
+    letterSpacing: "0.04em",
+    borderRight: "1px solid rgba(255,255,255,0.12)",
+    textTransform: "uppercase",
+  };
+
+  // Render rows with group headers interleaved; T/R continuous.
+  const out: React.ReactNode[] = [];
+  let lastGroup = "";
+  let tr = 0;
+  rows.forEach((r, i) => {
+    if (r.group !== lastGroup) {
+      lastGroup = r.group;
+      out.push(
+        <div
+          key={`g-${r.group}-${i}`}
+          style={{
+            gridColumn: "1 / -1",
+            background: "#334155",
+            color: "#ffffff",
+            fontWeight: 800,
+            fontSize: "12px",
+            letterSpacing: "0.06em",
+            padding: "8px 14px",
+            borderTop: "1px solid #1e293b",
+          }}
+        >
+          {r.group}
+        </div>,
+      );
+    }
+    tr += 1;
+    const zebra = tr % 2 === 0 ? "#f8fafc" : "#ffffff";
+    const fifth = is58 ? r.teacher ?? "—" : r.blok ?? "—";
+    out.push(
+      <div key={`tr-${i}`} style={{ ...cell, justifyContent: "center", background: zebra, color: "#64748b", fontWeight: 700 }}>{tr}</div>,
+      <div key={`nm-${i}`} style={{ ...cell, background: zebra, fontWeight: 600 }}>{r.name}</div>,
+      <div key={`cl-${i}`} style={{ ...cell, justifyContent: "center", background: zebra, fontWeight: 700 }}>{r.className}</div>,
+      <div key={`fn-${i}`} style={{ ...cell, background: zebra }}>{r.fan}</div>,
+      <div key={`f5-${i}`} style={{ ...cell, background: zebra, color: "#475569" }}>{fifth}</div>,
+      <div key={`co-${i}`} style={{ ...cell, justifyContent: "center", background: zebra, fontWeight: 700 }}>{r.correct ?? "—"}</div>,
+      <div key={`nt-${i}`} style={{ ...cell, justifyContent: "center", background: zebra, fontWeight: 800, color: "#b91c1c", borderRight: "none" }}>{r.natija}</div>,
+    );
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Title bar */}
+      <div
+        style={{
+          background: "#1e293b",
+          color: "#ffffff",
+          fontWeight: 800,
+          fontSize: "14px",
+          letterSpacing: "0.02em",
+          padding: "12px 16px",
+        }}
+      >
+        {title}
+      </div>
+      {/* Column headers */}
+      <div style={{ display: "grid", gridTemplateColumns: GRID, background: "#475569" }}>
+        {headers.map((h, i) => (
+          <div key={h} style={{ ...hCell, borderRight: i === headers.length - 1 ? "none" : hCell.borderRight, justifyContent: i === 0 || i === 2 || i >= 5 ? "center" : "flex-start" }}>
+            {h}
+          </div>
+        ))}
+      </div>
+      {/* Body */}
+      <div style={{ display: "grid", gridTemplateColumns: GRID, borderBottom: "1px solid #e2e8f0" }}>
+        {out}
+      </div>
+    </div>
   );
 }
 

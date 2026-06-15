@@ -10,6 +10,8 @@ export interface SubjectResult {
   label: string;
   /** Per-student subject name (only for 9-11 blocks, e.g. "Matematika"). */
   subjectName?: string;
+  /** Teacher (ustoz) responsible for this subject — 5-8 sheets. */
+  teacher?: string;
   /** 0–100 for 5-8 (percent-based); null for 9-11 (point-based). */
   percent: number | null;
   /** Main value to display: "87%" or "34.1". */

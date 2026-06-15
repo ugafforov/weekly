@@ -138,6 +138,7 @@ interface SubjectDef {
   balCol?: number;
   faniCol?: number; // 9-11 per-student subject name
   idCol?: number; // subject-specific ID the student entered
+  teacherCol?: number; // 5-8 per-student teacher (ustoz)
 }
 interface SheetLayout {
   kind: SheetKind;
@@ -240,12 +241,16 @@ function buildLayout(sheet: XLSX.WorkSheet): SheetLayout | null {
     let levelCol: number | undefined;
     let correctCol: number | undefined;
     let idCol: number | undefined;
+    let teacherCol: number | undefined;
     let teacherLabel = "";
     for (let j = prevBlockEnd + 1; j < ri; j += 1) {
       if (isLevel(dataCols[j].n)) levelCol = dataCols[j].c;
       if (isCorrect(dataCols[j].n)) correctCol = dataCols[j].c;
       if (isId(dataCols[j].n)) idCol = dataCols[j].c;
-      if (isTeacher(dataCols[j].n)) teacherLabel = dataCols[j].label;
+      if (isTeacher(dataCols[j].n)) {
+        teacherLabel = dataCols[j].label;
+        teacherCol = dataCols[j].c;
+      }
     }
     prevBlockEnd = balCol !== undefined ? dataCols.findIndex((d) => d.c === balCol) : ri;
     const name = teacherLabel.replace(/\s*ustoz(i)?\s*$/i, "").trim();
@@ -256,6 +261,7 @@ function buildLayout(sheet: XLSX.WorkSheet): SheetLayout | null {
       levelCol,
       correctCol,
       idCol,
+      teacherCol,
       resultCol: dataCols[ri].c,
       balCol,
     });
@@ -306,6 +312,7 @@ function buildStudent(
       const ratio = correct !== null ? correct / totalQ : percent !== null ? percent / 100 : null;
       return {
         label: def.label,
+        teacher: def.teacherCol !== undefined ? fmt(cellAt(sheet, row, def.teacherCol)) || undefined : undefined,
         percent,
         resultText: percent !== null ? `${percent}%` : "—",
         correct,
