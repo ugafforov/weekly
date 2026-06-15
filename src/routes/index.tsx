@@ -15,6 +15,8 @@ import {
   Trash2,
   LogIn,
   LogOut,
+  CloudUpload,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
@@ -164,6 +166,7 @@ function RatingDashboard() {
   const [isDragging, setIsDragging] = useState(false);
   const [savedReports, setSavedReports] = useState<ReportMeta[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
 
   /* Load saved reports list when user logs in */
   useEffect(() => {
@@ -198,19 +201,33 @@ function RatingDashboard() {
   async function processFile(file: File) {
     setBusy("upload");
     setError("");
+    setSaveState("idle");
     try {
       const tools = await loadWorkbookTools();
       if (!tools) return;
       const parsed = await tools.parseRatingWorkbook(file);
       setWorkbook(parsed);
       setActiveClass("all");
-      /* Save to Firestore if logged in */
-      if (user) {
-        await saveReport(user.uid, parsed).catch(() => {});
-        listReports(user.uid).then(setSavedReports).catch(() => {});
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Excel faylini o'qib bo'lmadi.");
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  async function saveToCloud() {
+    if (!workbook || !user) return;
+    setBusy("save");
+    setSaveState("idle");
+    setError("");
+    try {
+      await saveReport(user.uid, workbook);
+      const list = await listReports(user.uid);
+      setSavedReports(list);
+      setSaveState("saved");
+    } catch {
+      setError("Bazaga saqlab bo'lmadi. Internetni tekshiring va qayta urining.");
+      setSaveState("idle");
     } finally {
       setBusy(undefined);
     }
@@ -425,6 +442,27 @@ function RatingDashboard() {
             </span>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {user ? (
+              <Button
+                size="sm"
+                className={saveState === "saved"
+                  ? "bg-emerald-600 text-white hover:bg-emerald-600"
+                  : ""}
+                onClick={saveToCloud}
+                disabled={Boolean(busy)}
+              >
+                {busy === "save" ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : saveState === "saved" ? (
+                  <Check />
+                ) : (
+                  <CloudUpload />
+                )}
+                <span className="hidden sm:inline">
+                  {saveState === "saved" ? "Saqlandi" : "Bazaga saqlash"}
+                </span>
+              </Button>
+            ) : null}
             {user && savedReports.length > 0 && (
               <Button
                 size="sm"
