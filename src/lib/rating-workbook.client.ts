@@ -319,7 +319,7 @@ function buildStudent(
       } satisfies SubjectResult;
     }
 
-    // 9-11 — point based
+    // 9-11 — point based. The per-subject bal is the raw result divided by 10.
     const points = rawNum(resultCell);
     const subjectName = def.faniCol !== undefined ? fmt(cellAt(sheet, row, def.faniCol)) : "";
     const present = !(correct === null && (points === null || points === 0));
@@ -331,7 +331,7 @@ function buildStudent(
       resultText: points !== null ? fmt(resultCell) : "—",
       correct,
       totalQuestions: totalQ,
-      score: "",
+      score: points !== null ? String(Math.round((points / 10) * 100) / 100) : "",
       id,
       idError,
       tone: present ? toneFromRatio(ratio) : "none",

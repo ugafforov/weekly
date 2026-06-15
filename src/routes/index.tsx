@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClientOnlyFn } from "@tanstack/react-start";
-import { useMemo, useRef, useState, type ChangeEvent, type Ref } from "react";
+import { useMemo, useRef, useState, useEffect, type ChangeEvent, type Ref } from "react";
 import {
   FileDown,
   FileSpreadsheet,
@@ -11,6 +11,10 @@ import {
   Users,
   Trophy,
   ChevronRight,
+  History,
+  Trash2,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
@@ -20,6 +24,15 @@ import type {
   Tone,
 } from "@/lib/rating-types";
 import logo from "@/assets/al-xorazmiy-logo.png";
+import { useAuth } from "@/lib/auth-context";
+import { AuthForm } from "@/components/AuthForm";
+import {
+  saveReport,
+  listReports,
+  loadReport,
+  deleteReport,
+  type ReportMeta,
+} from "@/lib/firestore-service";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -140,6 +153,7 @@ function makeDemoWorkbook(): RatingWorkbook {
 
 /* ─── Main Dashboard ───────────────────────────────────────────── */
 function RatingDashboard() {
+  const { user, signOut } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const [workbook, setWorkbook] = useState<RatingWorkbook>();
@@ -148,6 +162,16 @@ function RatingDashboard() {
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [savedReports, setSavedReports] = useState<ReportMeta[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  /* Load saved reports list when user logs in */
+  useEffect(() => {
+    if (!user) { setSavedReports([]); return; }
+    listReports(user.uid)
+      .then(setSavedReports)
+      .catch(() => {/* Firestore API hali yoqilmagan bo'lishi mumkin */});
+  }, [user]);
 
   const classes = useMemo(
     () => [...new Set(workbook?.students.map((s) => s.className) ?? [])].sort(classSort),
@@ -177,13 +201,36 @@ function RatingDashboard() {
     try {
       const tools = await loadWorkbookTools();
       if (!tools) return;
-      setWorkbook(await tools.parseRatingWorkbook(file));
+      const parsed = await tools.parseRatingWorkbook(file);
+      setWorkbook(parsed);
       setActiveClass("all");
+      /* Save to Firestore if logged in */
+      if (user) {
+        await saveReport(user.uid, parsed).catch(() => {});
+        listReports(user.uid).then(setSavedReports).catch(() => {});
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Excel faylini o'qib bo'lmadi.");
     } finally {
       setBusy(undefined);
     }
+  }
+
+  async function openSavedReport(dateIso: string) {
+    if (!user) return;
+    setBusy("load");
+    try {
+      const wb = await loadReport(user.uid, dateIso);
+      if (wb) { setWorkbook(wb); setActiveClass("all"); setShowHistory(false); }
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  async function removeSavedReport(dateIso: string) {
+    if (!user) return;
+    await deleteReport(user.uid, dateIso).catch(() => {});
+    setSavedReports((prev) => prev.filter((r) => r.id !== dateIso));
   }
 
   const upload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -264,7 +311,8 @@ function RatingDashboard() {
         const image = await toPng(clone, {
           width,
           height,
-          pixelRatio: 2,
+          pixelRatio: 3,
+          cacheBust: true,
           skipFonts: true,
           backgroundColor: "#eef2f7",
           style: {
@@ -279,20 +327,24 @@ function RatingDashboard() {
           i.onload = () => res(i);
           i.src = image;
         });
-        // Portrait page; scale the whole report to fit one page (contain).
-        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-        const margin = 8;
-        const availW = 210 - margin * 2;
-        const availH = 297 - margin * 2;
+        // Pick the orientation that lets the report fill the page (best quality), then contain-fit.
         const ratio = props.width / props.height;
+        const orientation = ratio >= 1 ? "landscape" : "portrait";
+        const pdf = new jsPDF({ orientation, unit: "mm", format: "a4" });
+        const pageW = orientation === "landscape" ? 297 : 210;
+        const pageH = orientation === "landscape" ? 210 : 297;
+        const margin = 8;
+        const availW = pageW - margin * 2;
+        const availH = pageH - margin * 2;
         let w = availW;
         let h = w / ratio;
         if (h > availH) {
           h = availH;
           w = h * ratio;
         }
-        const x = (210 - w) / 2;
-        pdf.addImage(image, "PNG", x, margin, w, h, undefined, "FAST");
+        const x = (pageW - w) / 2;
+        const y = (pageH - h) / 2;
+        pdf.addImage(image, "PNG", x, y, w, h, undefined, "SLOW");
         pdf.save(`${activeClass}-${workbook?.date}-reyting.pdf`);
       } finally {
         document.body.removeChild(wrapper);
@@ -348,6 +400,12 @@ function RatingDashboard() {
           setWorkbook(makeDemoWorkbook());
           setActiveClass("5A");
         }}
+        user={user}
+        savedReports={savedReports}
+        onOpenReport={openSavedReport}
+        onDeleteReport={removeSavedReport}
+        onSignOut={signOut}
+        busyLoad={busy === "load"}
       />
     );
   }
@@ -367,6 +425,17 @@ function RatingDashboard() {
             </span>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {user && savedReports.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="dash-btn-outline"
+                onClick={() => setShowHistory((v) => !v)}
+              >
+                <History />
+                <span className="hidden sm:inline">Tarix</span>
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -386,9 +455,47 @@ function RatingDashboard() {
               {busy === "upload" ? <LoaderCircle className="animate-spin" /> : <Upload />}
               <span className="hidden sm:inline">Faylni almashtirish</span>
             </Button>
+            {user ? (
+              <Button size="sm" variant="ghost" className="text-dash-muted" onClick={signOut} title="Chiqish">
+                <LogOut className="size-4" />
+              </Button>
+            ) : null}
           </div>
         </div>
       </header>
+
+      {/* History dropdown panel */}
+      {showHistory && user && savedReports.length > 0 && (
+        <div className="no-print border-b border-dash-border bg-dash-surface/95 backdrop-blur-md">
+          <div className="mx-auto max-w-[1840px] px-4 py-3 lg:px-6">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-dash-muted">Saqlangan hisobotlar</p>
+            <div className="flex flex-wrap gap-2">
+              {savedReports.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-2 rounded-lg border border-dash-border bg-card px-3 py-1.5 text-sm shadow-sm"
+                >
+                  <button
+                    className="font-semibold text-primary hover:underline"
+                    onClick={() => openSavedReport(r.id)}
+                    disabled={busy === "load"}
+                  >
+                    {r.date}
+                  </button>
+                  <span className="text-xs text-dash-muted">{r.studentCount} o'q</span>
+                  <button
+                    className="ml-1 text-dash-muted/60 hover:text-destructive"
+                    onClick={() => removeSavedReport(r.id)}
+                    title="O'chirish"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mx-auto max-w-[1840px] px-4 pb-8 pt-5 lg:px-6">
         <div className="no-print mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -484,6 +591,12 @@ function UploadScreen({
   inputRef,
   onFileChange,
   onDemo,
+  user,
+  savedReports,
+  onOpenReport,
+  onDeleteReport,
+  onSignOut,
+  busyLoad,
 }: {
   busy?: string;
   error: string;
@@ -495,11 +608,52 @@ function UploadScreen({
   inputRef: React.RefObject<HTMLInputElement | null>;
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onDemo: () => void;
+  user: import("firebase/auth").User | null;
+  savedReports: ReportMeta[];
+  onOpenReport: (dateIso: string) => void;
+  onDeleteReport: (dateIso: string) => void;
+  onSignOut: () => void;
+  busyLoad: boolean;
 }) {
+  const [showAuth, setShowAuth] = useState(false);
+
   return (
     <div className="upload-bg flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <input ref={inputRef} className="hidden" type="file" accept=".xlsx,.xls" onChange={onFileChange} />
+
+      {/* Top-right: auth status */}
+      <div className="fixed right-4 top-4 z-20 flex items-center gap-2">
+        {user ? (
+          <>
+            <span className="hidden text-xs text-muted-foreground sm:inline">{user.email}</span>
+            <button
+              onClick={onSignOut}
+              className="flex items-center gap-1 rounded-lg border border-border bg-card/80 px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm backdrop-blur-sm hover:text-foreground"
+            >
+              <LogOut className="size-3.5" />
+              Chiqish
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setShowAuth((v) => !v)}
+            className="flex items-center gap-1 rounded-lg border border-border bg-card/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur-sm hover:bg-card"
+          >
+            <LogIn className="size-3.5" />
+            Kirish
+          </button>
+        )}
+      </div>
+
       <img src={logo} alt="Al-Xorazmiy School" className="mb-8 h-16 w-auto object-contain opacity-90" />
+
+      {/* Auth form (toggle) */}
+      {!user && showAuth && (
+        <div className="mb-6 w-full max-w-sm">
+          <AuthForm />
+        </div>
+      )}
+
       <div
         className={`upload-card ${isDragging ? "upload-card-drag" : ""}`}
         onDrop={onDrop}
@@ -529,6 +683,7 @@ function UploadScreen({
           <ChevronRight className="size-3.5 opacity-70" />
         </div>
       </div>
+
       <div className="mt-6 flex flex-wrap justify-center gap-2">
         {["5–8 sinf", "9–11 sinf", "Umumiy reyting", "Telegram PNG", "PDF eksport"].map((f) => (
           <span
@@ -548,6 +703,41 @@ function UploadScreen({
       >
         Demo ko'rish →
       </button>
+
+      {/* Saved reports history */}
+      {user && savedReports.length > 0 && (
+        <div className="mt-8 w-full max-w-sm">
+          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <History className="size-3.5" />
+            Saqlangan hisobotlar
+          </p>
+          <div className="flex flex-col gap-2">
+            {savedReports.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between rounded-xl border border-border bg-card/80 px-4 py-2.5 shadow-sm backdrop-blur-sm"
+              >
+                <button
+                  className="flex flex-col items-start gap-0.5 text-left"
+                  onClick={() => onOpenReport(r.id)}
+                  disabled={busyLoad}
+                >
+                  <span className="text-sm font-bold text-primary hover:underline">{r.date}</span>
+                  <span className="text-xs text-muted-foreground">{r.studentCount} o'quvchi · {r.fileName}</span>
+                </button>
+                <button
+                  className="ml-3 text-muted-foreground/50 hover:text-destructive"
+                  onClick={() => onDeleteReport(r.id)}
+                  title="O'chirish"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mt-5 flex max-w-sm items-start gap-3 rounded-xl border border-coral-soft/50 bg-coral-soft/60 px-4 py-3">
           <span className="mt-0.5 text-base">⚠️</span>
@@ -629,8 +819,8 @@ function SubjectCell({
   /* ID error */
   if (subject.idError) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "12px 10px", background: "rgba(254, 243, 199, 0.75)", borderRight: "1px solid rgba(203, 213, 225, 0.55)", height: "100%", boxSizing: "border-box" }}>
-        <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "5px", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: "3px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "7px 10px", background: "linear-gradient(180deg, rgba(254, 245, 207, 0.9) 0%, rgba(253, 234, 170, 0.62) 100%)", borderRight: "1px solid rgba(203, 213, 225, 0.45)", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.6)", height: "100%", boxSizing: "border-box" }}>
+        <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#b45309", background: "rgba(255, 251, 235, 0.85)", border: "1px solid #fde68a", borderRadius: "5px", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: "3px", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0,0,0,0.03)" }}>
           ⚠ ID xato kiritilgan
         </span>
       </div>
@@ -640,9 +830,9 @@ function SubjectCell({
   /* Absent */
   if (!subject.present) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "12px 10px", background: "rgba(241, 245, 249, 0.7)", borderRight: "1px solid rgba(203, 213, 225, 0.55)", height: "100%", boxSizing: "border-box" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "7px 10px", background: "linear-gradient(180deg, rgba(248, 250, 252, 0.85) 0%, rgba(238, 242, 247, 0.55) 100%)", borderRight: "1px solid rgba(203, 213, 225, 0.45)", height: "100%", boxSizing: "border-box" }}>
         <span style={{ fontSize: "15px", fontWeight: 700, color: "#94a3b8" }}>—</span>
-        <span style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8", marginTop: "2px" }}>kirmagan</span>
+        <span style={{ fontSize: "10px", fontWeight: 600, color: "rgba(148, 163, 184, 0.85)", marginTop: "1px" }}>kirmagan</span>
       </div>
     );
   }
@@ -659,38 +849,48 @@ function SubjectCell({
     ? "#ef4444"
     : "#cbd5e1";
 
+  /* Per-subject bal. 5-8 carries it in `score`; 9-11 derives it as result / 10. */
+  const balText = subject.score
+    ? subject.score
+    : is911 && subject.resultText && subject.resultText !== "\u2014"
+    ? (() => {
+        const n = parseFloat(subject.resultText.replace(",", "."));
+        return Number.isFinite(n) ? String(Math.round((n / 10) * 100) / 100) : "";
+      })()
+    : "";
+
+  /* Glass cell tints \u2014 light sheen on top fading into the tone colour. */
   const cellBg = subject.tone === "high"
-    ? "rgba(209, 250, 229, 0.85)"
+    ? "linear-gradient(180deg, rgba(222, 252, 236, 0.92) 0%, rgba(205, 247, 225, 0.62) 100%)"
     : subject.tone === "mid"
-    ? "rgba(254, 243, 199, 0.85)"
+    ? "linear-gradient(180deg, rgba(255, 247, 224, 0.92) 0%, rgba(253, 238, 190, 0.62) 100%)"
     : subject.tone === "low"
-    ? "rgba(254, 226, 226, 0.85)"
+    ? "linear-gradient(180deg, rgba(255, 233, 233, 0.92) 0%, rgba(253, 219, 219, 0.62) 100%)"
     : "transparent";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "12px 10px", background: cellBg, borderRight: "1px solid rgba(203, 213, 225, 0.55)", height: "100%", boxSizing: "border-box" }}>
-      {/* Line 1: left=fraction | center=percent | right=score bal */}
+    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "7px 10px", background: cellBg, borderRight: "1px solid rgba(203, 213, 225, 0.45)", boxShadow: subject.tone === "none" ? "none" : "inset 0 1px 0 rgba(255, 255, 255, 0.6)", height: "100%", boxSizing: "border-box" }}>
+      {/* Line 1: left=fraction (secondary) | center=percent (primary) | right=score bal (secondary) */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "4px" }}>
         {subject.correct !== null ? (
-          <span style={{ fontSize: "9.5px", fontWeight: 600, color: "#64748b" }}>{subject.correct} / {subject.totalQuestions}</span>
+          <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(100, 116, 139, 0.7)" }}>{subject.correct} / {subject.totalQuestions}</span>
         ) : (
           <span />
         )}
-        <span style={{ fontSize: "18px", fontWeight: 900, color: t.fg }}>{subject.resultText}</span>
-        {subject.score ? (
-          <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#475569" }}>{subject.score} bal</span>
+        <span style={{ fontSize: "18px", fontWeight: 900, color: t.fg, letterSpacing: "-0.01em" }}>{subject.resultText}</span>
+        {balText ? (
+          <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(71, 85, 105, 0.78)" }}>{balText} bal</span>
         ) : (
           <span />
         )}
       </div>
 
-      {/* Line 2: progress bar */}
-      <div style={{ width: "100%", height: "5px", borderRadius: "9999px", background: "#eef2f7", overflow: "hidden", marginTop: "7px" }}>
-        <div style={{ height: "100%", width: `${barWidth}%`, background: barColor, borderRadius: "9999px" }} />
+      {/* Line 2: progress bar \u2014 glassy track + glossy fill */}
+      <div style={{ width: "100%", height: "4px", borderRadius: "9999px", background: "rgba(15, 23, 42, 0.07)", overflow: "hidden", marginTop: "5px", boxShadow: "inset 0 1px 1px rgba(15, 23, 42, 0.07)" }}>
+        <div style={{ height: "100%", width: `${barWidth}%`, background: `linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 55%), ${barColor}`, borderRadius: "9999px" }} />
       </div>
 
-      {/* Line 3: level badge (only for 5-8, not 3-fan) */}
-      {/* Line 3: level badge (for 5-8, show empty placeholder on 3rd subject for uniformity) */}
+      {/* Line 3: level badge (5-8 only; empty placeholder on 3rd subject for uniformity) \u2014 secondary, dim */}
       {!is911 && (
         <span
           style={{
@@ -699,14 +899,15 @@ function SubjectCell({
             alignSelf: "center",
             fontSize: "8px",
             fontWeight: 700,
-            color: isThird || !subject.level ? "transparent" : "#475569",
-            background: isThird || !subject.level ? "rgba(255, 255, 255, 0.25)" : "rgba(255, 255, 255, 0.65)",
-            border: isThird || !subject.level ? "1px dashed rgba(203, 213, 225, 0.5)" : "1px solid rgba(255, 255, 255, 0.85)",
+            color: isThird || !subject.level ? "transparent" : "rgba(71, 85, 105, 0.78)",
+            background: isThird || !subject.level ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.55)",
+            border: isThird || !subject.level ? "1px dashed rgba(203, 213, 225, 0.45)" : "1px solid rgba(255, 255, 255, 0.8)",
+            boxShadow: isThird || !subject.level ? "none" : "inset 0 1px 0 rgba(255, 255, 255, 0.7)",
             borderRadius: "5px",
             padding: "1px 5px",
-            marginTop: "6px",
+            marginTop: "4px",
             gap: "3px",
-            minHeight: "14px",
+            minHeight: "13px",
             width: isThird || !subject.level ? "40px" : "auto",
             boxSizing: "border-box",
           }}
@@ -715,6 +916,35 @@ function SubjectCell({
             <span style={{ display: "inline-block", width: "4px", height: "4px", borderRadius: "50%", background: "#0d9488" }} />
           )}
           {isThird || !subject.level ? "\u00A0" : `${subject.level}-etap`}
+        </span>
+      )}
+
+      {/* Line 3 (9-11): the student's actual subject name for this block \u2014 secondary, dim */}
+      {is911 && (
+        <span
+          style={{
+            display: "inline-block",
+            alignSelf: "center",
+            maxWidth: "100%",
+            fontSize: "8px",
+            fontWeight: 700,
+            letterSpacing: "0.01em",
+            textAlign: "center",
+            color: subject.subjectName ? "rgba(71, 85, 105, 0.8)" : "transparent",
+            background: subject.subjectName ? "rgba(255, 255, 255, 0.55)" : "rgba(255, 255, 255, 0.2)",
+            border: subject.subjectName ? "1px solid rgba(255, 255, 255, 0.8)" : "1px dashed rgba(203, 213, 225, 0.45)",
+            boxShadow: subject.subjectName ? "inset 0 1px 0 rgba(255, 255, 255, 0.7)" : "none",
+            borderRadius: "5px",
+            padding: "0.5px 6px",
+            marginTop: "5px",
+            minHeight: "12px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            boxSizing: "border-box",
+          }}
+        >
+          {subject.subjectName || "\u00A0"}
         </span>
       )}
     </div>
@@ -760,8 +990,8 @@ function DisciplineCell({
         justifyContent: "center",
         alignItems: "center",
         gap: "7px",
-        padding: "10px 8px",
-        borderRight: "1px solid rgba(203, 213, 225, 0.55)",
+        padding: "6px 8px",
+        borderRight: "1px solid rgba(203, 213, 225, 0.45)",
         height: "100%",
         boxSizing: "border-box",
       }}
@@ -781,12 +1011,12 @@ function DisciplineCell({
               borderRadius: "50%",
               fontSize: "11px",
               fontWeight: 800,
-              background: d.empty ? "rgba(241, 245, 249, 0.5)" : colors.bg,
+              background: d.empty
+                ? "rgba(241, 245, 249, 0.45)"
+                : `linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 60%), ${colors.bg}`,
               border: `1px solid ${d.empty ? "rgba(221, 229, 238, 0.6)" : colors.border}`,
               color: d.empty ? "rgba(203, 213, 225, 0.8)" : colors.fg,
-              boxShadow: d.empty ? "none" : "inset 0 1px 2px rgba(255, 255, 255, 0.45), 0 2px 4px rgba(0, 0, 0, 0.02)",
-              backdropFilter: "blur(2px)",
-              WebkitBackdropFilter: "blur(2px)",
+              boxShadow: d.empty ? "none" : "inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 1px 3px rgba(0, 0, 0, 0.04)",
             }}
           >
             {d.empty ? "" : d.value}
@@ -863,11 +1093,11 @@ function ClassReport({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "14px",
+    fontSize: "13.5px",
     fontWeight: 900,
     color: "#ffffff",
-    letterSpacing: "0.04em",
-    padding: "16px 8px",
+    letterSpacing: "0.05em",
+    padding: "12px 8px",
     textAlign: "center",
     borderRight: "1px solid rgba(255, 255, 255, 0.12)",
     boxSizing: "border-box",
@@ -877,7 +1107,7 @@ function ClassReport({
     <div
       ref={ref}
       style={{
-        fontFamily: "'DM Sans', 'Segoe UI', system-ui, sans-serif",
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         background: "linear-gradient(160deg, #eef2f7 0%, #e4ecf4 100%)",
         padding: "24px 30px",
         width: "1338px",
@@ -896,8 +1126,7 @@ function ClassReport({
           width: "400px",
           height: "400px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, rgba(20, 184, 166, 0) 70%)",
-          filter: "blur(60px)",
+          background: "radial-gradient(circle, rgba(20, 184, 166, 0.13) 0%, rgba(20, 184, 166, 0) 70%)",
           pointerEvents: "none",
         }}
       />
@@ -909,8 +1138,7 @@ function ClassReport({
           width: "450px",
           height: "450px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%)",
-          filter: "blur(70px)",
+          background: "radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 70%)",
           pointerEvents: "none",
         }}
       />
@@ -923,20 +1151,17 @@ function ClassReport({
           width: "500px",
           height: "500px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0) 70%)",
-          filter: "blur(80px)",
+          background: "radial-gradient(circle, rgba(244, 63, 94, 0.07) 0%, rgba(244, 63, 94, 0) 70%)",
           pointerEvents: "none",
         }}
       />
 
       <div
         style={{
-          background: "rgba(255, 255, 255, 0.72)",
-          backdropFilter: "blur(18px) saturate(130%)",
-          WebkitBackdropFilter: "blur(18px) saturate(130%)",
+          background: "rgba(255, 255, 255, 0.94)",
           borderRadius: "22px",
-          boxShadow: "0 24px 60px rgba(15, 42, 60, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
-          border: "1px solid rgba(255, 255, 255, 0.45)",
+          boxShadow: "0 24px 60px rgba(15, 42, 60, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
+          border: "1px solid rgba(255, 255, 255, 0.6)",
           overflow: "hidden",
           width: "1278px",
           position: "relative",
@@ -992,9 +1217,27 @@ function ClassReport({
           <div style={{ display: "grid", gridTemplateColumns: GRID_COLS, columnGap: "0px", borderBottom: "1px solid #0b5d56", background: "#0c5c54", padding: "0" }}>
             <div style={{ ...hdrCell, justifyContent: "center" }}>№</div>
             <div style={{ ...hdrCell, justifyContent: "flex-start", paddingLeft: "20px" }}>O'QUVCHI</div>
-            {headerMains.map((l, idx) => (
-              <div key={`h${idx}`} style={hdrCell}>{l}</div>
-            ))}
+            {headerMains.map((l, idx) => {
+              const blokBal = is911
+                ? (["3.1", "2.1", "1.1", ""] as const)[idx] ?? ""
+                : "";
+              return (
+                <div key={`h${idx}`} style={{ ...hdrCell, flexDirection: "column", gap: "4px" }}>
+                  <span>{l}</span>
+                  {blokBal && (
+                    <span style={{
+                      fontSize: "9.5px",
+                      fontWeight: 700,
+                      color: "#f6d98a",
+                      letterSpacing: "0.04em",
+                      opacity: 0.9,
+                    }}>
+                      {blokBal} bal
+                    </span>
+                  )}
+                </div>
+              );
+            })}
             {/* INTIZOM header: title + D K V O circles */}
             <div style={{ ...hdrCell, flexDirection: "column", gap: "6px", padding: "10px 4px", lineHeight: 1.15 }}>
               <span style={{ fontSize: "14px", fontWeight: 900 }}>INTIZOM</span>
@@ -1063,52 +1306,53 @@ function ClassReport({
                     display: "grid",
                     gridTemplateColumns: GRID_COLS,
                     alignItems: "stretch",
-                    borderBottom: i === students.length - 1 ? "none" : "2px solid rgba(203, 213, 225, 0.55)",
+                    borderBottom: i === students.length - 1 ? "none" : "1px solid rgba(203, 213, 225, 0.5)",
                     background: absent
-                      ? "rgba(241, 245, 249, 0.6)"
+                      ? "rgba(241, 245, 249, 0.55)"
                       : i % 2 === 0
-                      ? "rgba(255, 255, 255, 0.72)"
-                      : "rgba(248, 250, 252, 0.55)",
-                    height: "80px",
+                      ? "rgba(255, 255, 255, 0.74)"
+                      : "rgba(248, 250, 252, 0.5)",
+                    height: is911 ? "70px" : "64px",
                   }}
                 >
                   {/* ── Rank ── */}
-                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "8px 4px", borderRight: "1px solid rgba(203, 213, 225, 0.55)" }}>
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "6px 4px", borderRight: "1px solid rgba(203, 213, 225, 0.45)" }}>
                     {showBadge ? (
                       <span
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          width: "30px",
-                          height: "30px",
+                          width: "29px",
+                          height: "29px",
                           borderRadius: "50%",
-                          fontSize: "13.5px",
+                          fontSize: "13px",
                           fontWeight: 900,
-                          background: rankBg,
-                          border: `2px solid ${rankBorder}`,
+                          background: `linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 60%), ${rankBg}`,
+                          border: `1.5px solid ${rankBorder}`,
                           color: rankFg,
+                          boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 1px 3px rgba(0, 0, 0, 0.05)",
                         }}
                       >
                         {seq}
                       </span>
                     ) : (
-                      <span style={{ fontSize: "15px", fontWeight: 800, color: "#94a3b8" }}>{seq}</span>
+                      <span style={{ fontSize: "14px", fontWeight: 800, color: "#94a3b8" }}>{seq}</span>
                     )}
                   </div>
 
                   {/* ── Name + ID ── */}
-                  <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "8px 20px", gap: "4px", borderRight: "1px solid rgba(203, 213, 225, 0.55)" }}>
+                  <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "6px 18px", gap: "3px", borderRight: "1px solid rgba(203, 213, 225, 0.45)" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
                       <span style={{ fontSize: "13.5px", fontWeight: 700, color: absent ? "#94a3b8" : "#1e293b", whiteSpace: "nowrap" }}>{s.name}</span>
                       {s.studentId && (
-                        <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#64748b", background: "#f1f5f9", border: "1px solid rgba(203, 213, 225, 0.8)", borderRadius: "5px", padding: "1.5px 6px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(100, 116, 139, 0.85)", background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(203, 213, 225, 0.6)", borderRadius: "5px", padding: "1.5px 6px", whiteSpace: "nowrap", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.7)" }}>
                           ID {s.studentId}
                         </span>
                       )}
                     </div>
                     {absent && (
-                      <span style={{ fontSize: "9px", fontWeight: 800, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "5px", padding: "1.5px 7px", alignSelf: "flex-start" }}>KELMAGAN</span>
+                      <span style={{ fontSize: "9px", fontWeight: 800, color: "#ef4444", background: "rgba(254, 242, 242, 0.85)", border: "1px solid #fecaca", borderRadius: "5px", padding: "1.5px 7px", alignSelf: "flex-start", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.6)" }}>KELMAGAN</span>
                     )}
                   </div>
 
@@ -1120,7 +1364,7 @@ function ClassReport({
                       if (si === midAfter - 1) {
                         /* O'rtacha bal */
                         cells.push(
-                          <div key={`${i}-mid`} style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "12px 8px", borderRight: "1px solid rgba(203, 213, 225, 0.55)" }}>
+                          <div key={`${i}-mid`} style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "6px 8px", borderRight: "1px solid rgba(203, 213, 225, 0.45)" }}>
                             <span style={{ fontSize: "18px", fontWeight: 800, color: absent ? "#94a3b8" : "#334155" }}>{s.midScore}</span>
                           </div>,
                         );
@@ -1132,13 +1376,14 @@ function ClassReport({
                   {/* ── Discipline ── */}
                   <DisciplineCell discipline={s.discipline} />
 
-                  {/* ── JAMI (solid column) ── */}
+                  {/* ── JAMI (solid column) — glossy glass ── */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: tc.bg,
+                      background: `linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 45%), ${tc.bg}`,
+                      boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.28)",
                       height: "100%",
                       width: "100%",
                     }}
@@ -1148,6 +1393,7 @@ function ClassReport({
                         fontSize: "19px",
                         fontWeight: 900,
                         color: "#ffffff",
+                        textShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
                       }}
                     >
                       {s.totalText}
@@ -1201,7 +1447,7 @@ function ClassReport({
               }}
             >
               {is911
-                ? "JAMI ball = Imtihon + Intizom"
+                ? "Fan bali = natija / 10 · JAMI ball = Imtihon + Intizom"
                 : "JAMI ball = (Ingliz + Matematika) / 2 + 3-fan + Intizom"}
             </div>
           </div>

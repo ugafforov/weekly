@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default: only signed-in users can read or write.
+    // Tighten per-collection as your data model grows.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
