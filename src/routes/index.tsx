@@ -56,15 +56,6 @@ const TONE: Record<Tone, { bg: string; border: string; fg: string; sub: string; 
   none: { bg: "#f1f5f9", border: "#e2e8f0", fg: "#94a3b8", sub: "#b4bfcc", bar: "#cbd5e1" },
 };
 
-/* Brand palette derived from the Al-Xorazmiy logo (teal/turquoise). */
-const BRAND = {
-  headerGradient: "linear-gradient(120deg, #0b5d56 0%, #128a7f 55%, #18a89c 100%)",
-  headBg: "#0e7269",
-  headLine: "rgba(255,255,255,0.22)",
-  deep: "#0e7269",
-  midCellBg: "#f1f8f7",
-};
-
 const loadWorkbookTools = createClientOnlyFn(() => import("@/lib/rating-workbook.client"));
 
 /* ─── Demo data (preview only) ─────────────────────────────────── */
@@ -81,7 +72,7 @@ function makeDemoWorkbook(): RatingWorkbook {
     percent,
     resultText: present ? `${percent}%` : "—",
     correct,
-    totalQuestions: 15,
+    totalQuestions: /3-fan/i.test(label) ? 10 : 15,
     score,
     level: present ? level : undefined,
     tone: !present ? "none" : percent >= 60 ? "high" : percent >= 34 ? "mid" : percent > 0 ? "low" : "none",
@@ -128,17 +119,23 @@ function makeDemoWorkbook(): RatingWorkbook {
       status,
     };
   };
-  const wrongIdSub = (s: SubjectResult, badId: string): SubjectResult => ({ ...s, id: badId, idError: true });
   const students: NormalizedStudent[] = [
-    mk("Masalixanov Muhammadziyo", "511", [sub("INGLIZ TILI", 73, 11, "6"), sub("MATEMATIKA", 53, 8, "5"), sub("3-FAN", 30, 3, "1.5")], [1, 1, 1, 1]),
-    mk("Hoshimboyev Muhammadqodir", "500", [sub("INGLIZ TILI", 87, 13, "4.5"), sub("MATEMATIKA", 67, 10, "5.5"), sub("3-FAN", 20, 2, "1")], [1, 1, 1, null]),
-    mk("Ismoilova Madina", "508", [sub("INGLIZ TILI", 80, 12, "4.5"), sub("MATEMATIKA", 100, 15, "4"), sub("3-FAN", 50, 5, "2")], [1, 1, 1, 1]),
-    mk("Tojiboyev Ubaydullo", "506", [sub("INGLIZ TILI", 87, 13, "6.5"), sub("MATEMATIKA", 27, 4, "1.5"), sub("3-FAN", 60, 6, "2.5")], [1, 1, 1, 1]),
-    mk("Risqiddinov Sarvarbek", "503", [sub("INGLIZ TILI", 60, 9, "3.5"), wrongIdSub(sub("MATEMATIKA", 73, 11, "5"), "513"), sub("3-FAN", 10, 1, "1")], [1, 1, 1, 1], "wrong-id"),
-    mk("Nematov Nurmuhammad", "507", [sub("INGLIZ TILI", 67, 10, "3.5"), sub("MATEMATIKA", 40, 6, "1.5"), sub("3-FAN", 50, 5, "2")], [1, 0, 1, 1]),
+    mk("Hoshimboyev Muhammadqodir", "500", [sub("INGLIZ TILI", 87, 13, "4.5", true, "2"), sub("MATEMATIKA", 67, 10, "5.5", true, "4"), sub("3-FAN", 20, 2, "1")], [1, 1, 1, null]),
+    mk("Maxmudullayev Xondamir", "501", [sub("INGLIZ TILI", 40, 6, "1.5", true, "2"), sub("MATEMATIKA", 53, 8, "5", true, "4"), sub("3-FAN", 50, 5, "2")], [0, 1, 1, null]),
     mk("Uraimov O'tkirbek", "502", [sub("INGLIZ TILI", 0, null, "0", false), sub("MATEMATIKA", 0, null, "0", false), sub("3-FAN", 0, null, "0", false)], [0, 0, 0, null], "absent"),
+    mk("Risqiddinov Sarvarbek", "503", [sub("INGLIZ TILI", 60, 9, "3.5", true, "2"), sub("MATEMATIKA", 73, 11, "5", true, "3"), sub("3-FAN", 10, 1, "1")], [1, 1, 1, null]),
+    mk("Rahimov Muhammadqodir", "504", [sub("INGLIZ TILI", 27, 4, "1.5", true, "1"), sub("MATEMATIKA", 40, 6, "1.5", true, "2"), sub("3-FAN", 30, 3, "1.5")], [1, 1, 1, null]),
+    mk("Lochinboyeva Bibixonim", "505", [sub("INGLIZ TILI", 7, 1, "1", true, "1"), sub("MATEMATIKA", 33, 5, "1.5", true, "2"), sub("3-FAN", 0, null, "0", false)], [1, 1, 1, null]),
+    mk("Tojiboyev Ubaydullo", "506", [sub("INGLIZ TILI", 87, 13, "6.5", true, "4"), sub("MATEMATIKA", 27, 4, "1.5", true, "5"), sub("3-FAN", 60, 6, "2.5")], [1, 1, 1, null]),
+    mk("Nematov Nurmuhammad", "507", [sub("INGLIZ TILI", 67, 10, "3.5", true, "2"), sub("MATEMATIKA", 40, 6, "1.5", true, "3"), sub("3-FAN", 50, 5, "2")], [1, 0, 1, null]),
+    mk("Ismoilova Madina", "508", [sub("INGLIZ TILI", 80, 12, "4.5", true, "2"), sub("MATEMATIKA", 100, 15, "4", true, "1"), sub("3-FAN", 50, 5, "2")], [1, 1, 1, null]),
+    mk("Rahmatullayeva Madina", "509", [sub("INGLIZ TILI", 0, null, "0", false), sub("MATEMATIKA", 0, null, "0", false), sub("3-FAN", 0, null, "0", false)], [0, 1, 1, null], "absent"),
+    mk("Kamoliddinov Abdulaziz", "510", [sub("INGLIZ TILI", 73, 11, "5", true, "3"), sub("MATEMATIKA", 47, 7, "1.5", true, "5"), sub("3-FAN", 40, 4, "1.5")], [1, 1, 1, null]),
+    mk("Masalixanov Muhammadziyo", "511", [sub("INGLIZ TILI", 73, 11, "6", true, "4"), sub("MATEMATIKA", 53, 8, "5", true, "4"), sub("3-FAN", 30, 3, "1.5")], [1, 1, 1, null]),
+    mk("Lukmonjonov Asrorbek", "512", [sub("INGLIZ TILI", 20, 3, "1", true, "5"), sub("MATEMATIKA", 53, 8, "4", true, "3"), sub("3-FAN", 50, 5, "2")], [1, 1, 1, null]),
+    mk("Iminjonova Sarvinoz", "513", [sub("INGLIZ TILI", 0, null, "0", false), sub("MATEMATIKA", 0, null, "0", false), sub("3-FAN", 0, null, "0", false)], [0, 0, 0, null], "absent"),
   ];
-  return { fileName: "Demo-namuna.xlsx", date: "13.06.2026", students };
+  return { fileName: "5A-13.06.2026.xlsx", date: "13.06.2026", students };
 }
 
 /* ─── Main Dashboard ───────────────────────────────────────────── */
@@ -823,6 +820,13 @@ function ClassReport({
   const maxTotal = useMemo(() => (activeTotals.length > 0 ? Math.max(...activeTotals) : 1), [activeTotals]);
   const minTotal = useMemo(() => (activeTotals.length > 0 ? Math.min(...activeTotals) : 0), [activeTotals]);
 
+  /* Score place by distinct JAMI (dense ranking): equal totals share a place,
+     so tied students get the same medal. The visible № column stays sequential. */
+  const scorePlaces = useMemo(() => {
+    const distinct = [...new Set(activeTotals)].sort((a, b) => b - a);
+    return new Map(distinct.map((total, idx) => [total, idx + 1]));
+  }, [activeTotals]);
+
   const totalTone = (total: number): Tone => {
     if (total <= 0) return "none";
     if (maxTotal === minTotal) return "high";
@@ -940,42 +944,32 @@ function ClassReport({
         }}
       >
         {/* ── Top brand header ── */}
-        <div style={{ display: "flex", alignItems: "center", padding: "22px 28px", background: BRAND.headerGradient, color: "#ffffff", borderRadius: "22px 22px 0 0", boxShadow: "inset 0 -1px 0 rgba(255,255,255,0.12)", flexWrap: "nowrap" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "64px", width: "64px", borderRadius: "16px", background: "#ffffff", boxShadow: "0 4px 14px rgba(0,0,0,0.16)", border: "1.5px solid rgba(255, 255, 255, 0.25)", flexShrink: 0, marginRight: "24px" }}>
-            <img src={logo} alt="Al-Xorazmiy" style={{ height: "54px", width: "54px", objectFit: "contain" }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0, marginRight: "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", whiteSpace: "nowrap", flexShrink: 0 }}>
-              <span style={{ fontSize: "11px", fontWeight: 900, letterSpacing: "0.18em", color: "#fcd34d", whiteSpace: "nowrap", flexShrink: 0, marginRight: "6px" }}>AL-XORAZMIY SCHOOL</span>
-              <span style={{ height: "4px", width: "4px", borderRadius: "50%", background: "rgba(255,255,255,0.4)", flexShrink: 0, marginRight: "6px" }} />
-              <span style={{ fontSize: "9.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.65)", letterSpacing: "0.08em", whiteSpace: "nowrap", flexShrink: 0 }}>HAFTALIK REYTING TIZIMI</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "30px 36px", background: "linear-gradient(135deg, #0a544e 0%, #0e7269 100%)", color: "#ffffff", borderRadius: "22px 22px 0 0", flexWrap: "nowrap" }}>
+          {/* Left cluster: logo · divider · titles */}
+          <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "56px", width: "56px", borderRadius: "14px", background: "#ffffff", boxShadow: "0 6px 18px rgba(0,0,0,0.16)", flexShrink: 0 }}>
+              <img src={logo} alt="Al-Xorazmiy" style={{ height: "44px", width: "44px", objectFit: "contain" }} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", marginTop: "3.5px", flexWrap: "nowrap" }}>
-              <div style={{ fontSize: "24px", fontWeight: 900, lineHeight: 1.15, letterSpacing: "-0.01em", textShadow: "0 1px 3px rgba(0,0,0,0.12)", whiteSpace: "nowrap", flexShrink: 0, marginRight: "12px" }}>
+            <div style={{ width: "1px", height: "48px", background: "rgba(255,255,255,0.16)", margin: "0 24px", flexShrink: 0 }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.26em", color: "#f6d98a" }}>AL-XORAZMIY SCHOOL</span>
+                <span style={{ width: "3px", height: "3px", borderRadius: "50%", background: "rgba(255,255,255,0.3)", margin: "0 10px", flexShrink: 0 }} />
+                <span style={{ fontSize: "9.5px", fontWeight: 600, letterSpacing: "0.13em", color: "rgba(255, 255, 255, 0.55)" }}>HAFTALIK REYTING TIZIMI</span>
+              </div>
+              <div style={{ fontSize: "26px", fontWeight: 800, lineHeight: 1.12, letterSpacing: "0.005em", marginTop: "8px", whiteSpace: "nowrap" }}>
                 HAFTALIK JAMG'ARILGAN BALLAR
               </div>
-              <div style={{ display: "inline-flex", alignItems: "center", background: "rgba(255, 255, 255, 0.12)", border: "1px solid rgba(255, 255, 255, 0.18)", borderRadius: "6px", padding: "3.5px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
-                <span style={{ display: "inline-block", fontSize: "11px", opacity: 0.9, flexShrink: 0, marginRight: "6px" }}>📅</span>
-                <span style={{ fontSize: "11px", fontWeight: 750, color: "#ffffff", letterSpacing: "0.02em", whiteSpace: "nowrap", flexShrink: 0 }}>{date} HISOBOTI</span>
+              <div style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.16em", color: "rgba(255, 255, 255, 0.6)", marginTop: "9px", whiteSpace: "nowrap" }}>
+                {date}
               </div>
             </div>
           </div>
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px 22px",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 100%)",
-              border: "1.5px solid rgba(255, 255, 255, 0.35)",
-              boxShadow: "0 8px 32px 0 rgba(11, 93, 86, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              minWidth: "82px",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ fontSize: "30px", fontWeight: 950, lineHeight: 1, color: "#ffffff", textShadow: "0 2px 4px rgba(0,0,0,0.15)" }}>{activeClass}</div>
-            <div style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.15em", color: "rgba(255,255,255,0.9)", marginTop: "3px" }}>SINF</div>
+          {/* Right: class — minimal, boxless */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0, paddingLeft: "28px" }}>
+            <span style={{ fontSize: "46px", fontWeight: 800, lineHeight: 0.92, letterSpacing: "-0.015em", color: "#ffffff" }}>{activeClass}</span>
+            <span style={{ display: "block", width: "100%", height: "2px", borderRadius: "2px", background: "#f6d98a", opacity: 0.85, margin: "8px 0 6px" }} />
+            <span style={{ fontSize: "9.5px", fontWeight: 700, letterSpacing: "0.34em", color: "rgba(255, 255, 255, 0.6)" }}>SINF</span>
           </div>
         </div>
 
@@ -1034,41 +1028,31 @@ function ClassReport({
           {/* Table body — unified table rows */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
             {students.map((s, i) => {
-              const rank = 1 + students.filter((o) => o.total > s.total || (o.total === s.total && pctSum(o) > pctSum(s))).length;
-              const tied = s.total > 0 && students.filter((o) => o.total === s.total && pctSum(o) === pctSum(s)).length > 1;
+              /* № column stays a plain sequence; it is never reordered or skipped. */
+              const seq = i + 1;
               const absent = s.status === "absent";
               const wrongId = s.status === "wrong-id" || s.subjects.some((x) => x.idError);
               const tc = TOTAL_COLOR[totalTone(s.total)];
 
-              /* Rank badge colors */
-              const medal = absent ? null : rank === 1 ? "#fbbf24" : rank === 2 ? "#94a3b8" : rank === 3 ? "#fb923c" : null;
-              const showMedal = !absent && rank <= 3;
-              const rankBg = showMedal
-                ? `${medal}18`
-                : (tied && !absent)
-                ? "#eef2ff"
-                : "transparent";
-              const rankBorder = showMedal
-                ? medal
-                : (tied && !absent)
-                ? "#a5b4fc"
-                : "#d1d5db";
-              const rankFg = showMedal
-                ? (rank === 1 ? "#a16207" : rank === 2 ? "#475569" : "#c2410c")
-                : (tied && !absent)
-                ? "#4f46e5"
-                : "#64748b";
+              /* Medal by JAMI place — equal totals share a place, so tied students
+                 look identical (same colour) and nobody feels ranked lower. */
+              const place = absent ? Infinity : scorePlaces.get(s.total) ?? Infinity;
+              const showBadge = place <= 3;
+              const medal = place === 1 ? "#fbbf24" : place === 2 ? "#94a3b8" : place === 3 ? "#fb923c" : null;
+              const rankBg = medal ? `${medal}18` : "transparent";
+              const rankBorder = medal ?? "#d1d5db";
+              const rankFg = place === 1 ? "#a16207" : place === 2 ? "#475569" : place === 3 ? "#c2410c" : "#64748b";
 
-              /* Row card border — slight left accent for top 3 */
+              /* Row card border — slight accent for top 3 places */
               const cardBorder = absent
                 ? "1px solid #e2e8f0"
                 : wrongId
                 ? "1px solid #fde68a"
-                : rank === 1
-        ? "1px solid #fde68a"
-                : rank === 2
+                : place === 1
+                ? "1px solid #fde68a"
+                : place === 2
                 ? "1px solid #d1d5db"
-                : rank === 3
+                : place === 3
                 ? "1px solid #fed7aa"
                 : "1px solid #e2e8f0";
 
@@ -1090,7 +1074,7 @@ function ClassReport({
                 >
                   {/* ── Rank ── */}
                   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "8px 4px", borderRight: "1px solid rgba(203, 213, 225, 0.55)" }}>
-                    {showMedal ? (
+                    {showBadge ? (
                       <span
                         style={{
                           display: "inline-flex",
@@ -1106,10 +1090,10 @@ function ClassReport({
                           color: rankFg,
                         }}
                       >
-                        {rank}
+                        {seq}
                       </span>
                     ) : (
-                      <span style={{ fontSize: "15px", fontWeight: 800, color: "#94a3b8" }}>{rank}</span>
+                      <span style={{ fontSize: "15px", fontWeight: 800, color: "#94a3b8" }}>{seq}</span>
                     )}
                   </div>
 

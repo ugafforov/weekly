@@ -297,16 +297,19 @@ function buildStudent(
     );
     const idError = colorMark || Boolean(id && studentId && id !== studentId);
 
+    // The 3rd subject always has 10 questions; the first two have 15.
+    const totalQ = def.isThird ? 10 : 15;
+
     if (layout.kind === "5-8") {
       const percent = percentFrom(resultCell);
       const present = !(correct === null && (percent === null || percent === 0));
-      const ratio = correct !== null ? correct / 15 : percent !== null ? percent / 100 : null;
+      const ratio = correct !== null ? correct / totalQ : percent !== null ? percent / 100 : null;
       return {
         label: def.label,
         percent,
         resultText: percent !== null ? `${percent}%` : "—",
         correct,
-        totalQuestions: 15,
+        totalQuestions: totalQ,
         score: def.balCol !== undefined ? fmt(cellAt(sheet, row, def.balCol)) : "",
         level: def.levelCol !== undefined ? fmt(cellAt(sheet, row, def.levelCol)) : undefined,
         id,
@@ -320,14 +323,14 @@ function buildStudent(
     const points = rawNum(resultCell);
     const subjectName = def.faniCol !== undefined ? fmt(cellAt(sheet, row, def.faniCol)) : "";
     const present = !(correct === null && (points === null || points === 0));
-    const ratio = correct !== null ? correct / 15 : null;
+    const ratio = correct !== null ? correct / totalQ : null;
     return {
       label: def.label,
       subjectName: subjectName || undefined,
       percent: null,
       resultText: points !== null ? fmt(resultCell) : "—",
       correct,
-      totalQuestions: 15,
+      totalQuestions: totalQ,
       score: "",
       id,
       idError,
