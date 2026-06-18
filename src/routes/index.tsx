@@ -948,8 +948,12 @@ function RedZoneReport({
         const hasSelectedSubject = st.subjects.some((sub) => {
           if (!isRedZone(sub)) return false;
           const subName = titleCase(sub.subjectName?.trim() || sub.label);
-          const teacherMatch = selectedTeachers.length === 0 || (sub.teacher && selectedTeachers.includes(sub.teacher.trim()));
-          return (selectedSubjects.length === 0 || selectedSubjects.includes(subName)) && teacherMatch;
+          const teacherMatch =
+            selectedTeachers.length === 0 ||
+            (sub.teacher && selectedTeachers.includes(sub.teacher.trim()));
+          return (
+            (selectedSubjects.length === 0 || selectedSubjects.includes(subName)) && teacherMatch
+          );
         });
 
         return hasSelectedSubject;
@@ -959,8 +963,12 @@ function RedZoneReport({
         subjects: st.subjects.filter((sub) => {
           if (!isRedZone(sub)) return false;
           const subName = titleCase(sub.subjectName?.trim() || sub.label);
-          const teacherMatch = selectedTeachers.length === 0 || (sub.teacher && selectedTeachers.includes(sub.teacher.trim()));
-          return (selectedSubjects.length === 0 || selectedSubjects.includes(subName)) && teacherMatch;
+          const teacherMatch =
+            selectedTeachers.length === 0 ||
+            (sub.teacher && selectedTeachers.includes(sub.teacher.trim()));
+          return (
+            (selectedSubjects.length === 0 || selectedSubjects.includes(subName)) && teacherMatch
+          );
         }),
       }));
   }, [students, selectedClasses, selectedSubjects, selectedTeachers]);
@@ -1086,7 +1094,9 @@ function RedZoneReport({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {(selectedClasses.length > 0 || selectedSubjects.length > 0 || selectedTeachers.length > 0) && (
+        {(selectedClasses.length > 0 ||
+          selectedSubjects.length > 0 ||
+          selectedTeachers.length > 0) && (
           <Button
             variant="ghost"
             size="sm"
@@ -1638,42 +1648,13 @@ function SubjectCell({
     );
   }
 
-  const ratio = is911
+  const percentText = is911
     ? subject.correct !== null
-      ? Math.min(1, subject.correct / subject.totalQuestions)
-      : 0
-    : subject.percent !== null
-      ? Math.min(1, subject.percent / 100)
-      : 0;
-  const barWidth = Math.round(ratio * 100);
-  const barColor =
-    subject.tone === "high"
-      ? "#22c55e"
-      : subject.tone === "mid"
-        ? "#f59e0b"
-        : subject.tone === "low"
-          ? "#ef4444"
-          : "#cbd5e1";
+      ? `${Math.round((subject.correct / subject.totalQuestions) * 100)}%`
+      : "—"
+    : subject.resultText;
 
-  /* Per-subject bal. 5-8 carries it in `score`; 9-11 derives it as result / 10. */
-  const balText = subject.score
-    ? subject.score
-    : is911 && subject.resultText && subject.resultText !== "\u2014"
-      ? (() => {
-          const n = parseFloat(subject.resultText.replace(",", "."));
-          return Number.isFinite(n) ? String(Math.round((n / 10) * 100) / 100) : "";
-        })()
-      : "";
-
-  /* Glass cell tints \u2014 light sheen on top fading into the tone colour. */
-  const cellBg =
-    subject.tone === "high"
-      ? "linear-gradient(180deg, rgba(222, 252, 236, 0.92) 0%, rgba(205, 247, 225, 0.62) 100%)"
-      : subject.tone === "mid"
-        ? "linear-gradient(180deg, rgba(255, 247, 224, 0.92) 0%, rgba(253, 238, 190, 0.62) 100%)"
-        : subject.tone === "low"
-          ? "linear-gradient(180deg, rgba(255, 233, 233, 0.92) 0%, rgba(253, 219, 219, 0.62) 100%)"
-          : "transparent";
+  const balText = is911 ? subject.resultText : subject.score;
 
   return (
     <div
@@ -1681,138 +1662,57 @@ function SubjectCell({
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
-        padding: "7px 10px",
-        background: cellBg,
+        alignItems: "center",
+        padding: "8px 6px",
+        background: subject.tone !== "none" ? t.bg : "transparent",
         borderRight: "1px solid rgba(203, 213, 225, 0.45)",
-        boxShadow: subject.tone === "none" ? "none" : "inset 0 1px 0 rgba(255, 255, 255, 0.6)",
         height: "100%",
         boxSizing: "border-box",
+        gap: "6px",
       }}
     >
-      {/* Line 1: left=fraction (secondary) | center=percent (primary) | right=score bal (secondary) */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          gap: "4px",
-        }}
-      >
-        {subject.correct !== null ? (
-          <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(100, 116, 139, 0.7)" }}>
-            {subject.correct} / {subject.totalQuestions}
-          </span>
-        ) : (
-          <span />
-        )}
-        <span style={{ fontSize: "18px", fontWeight: 900, color: t.fg, letterSpacing: "-0.01em" }}>
-          {subject.resultText}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+        <span style={{ fontSize: "15px", fontWeight: 800, color: t.fg }}>
+          {subject.correct !== null ? `${subject.correct} / ${subject.totalQuestions}` : "—"}
         </span>
-        {balText ? (
-          <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(71, 85, 105, 0.78)" }}>
-            {balText} bal
-          </span>
-        ) : (
-          <span />
+        {subject.correct !== null && (
+          <span style={{ fontSize: "13px", fontWeight: 700, color: t.sub }}>{percentText}</span>
         )}
       </div>
 
-      {/* Line 2: progress bar \u2014 glassy track + glossy fill */}
-      <div
-        style={{
-          width: "100%",
-          height: "4px",
-          borderRadius: "9999px",
-          background: "rgba(15, 23, 42, 0.07)",
-          overflow: "hidden",
-          marginTop: "5px",
-          boxShadow: "inset 0 1px 1px rgba(15, 23, 42, 0.07)",
-        }}
-      >
+      {subject.correct !== null && balText && balText !== "—" && (
         <div
           style={{
-            height: "100%",
-            width: `${barWidth}%`,
-            background: `linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 55%), ${barColor}`,
-            borderRadius: "9999px",
-          }}
-        />
-      </div>
-
-      {/* Line 3: level badge (5-8 only; empty placeholder on 3rd subject for uniformity) \u2014 secondary, dim */}
-      {!is911 && (
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            alignSelf: "center",
-            fontSize: "8px",
-            fontWeight: 700,
-            color: isThird || !subject.level ? "transparent" : "rgba(71, 85, 105, 0.78)",
-            background:
-              isThird || !subject.level ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.55)",
-            border:
-              isThird || !subject.level
-                ? "1px dashed rgba(203, 213, 225, 0.45)"
-                : "1px solid rgba(255, 255, 255, 0.8)",
-            boxShadow:
-              isThird || !subject.level ? "none" : "inset 0 1px 0 rgba(255, 255, 255, 0.7)",
-            borderRadius: "5px",
-            padding: "1px 5px",
-            marginTop: "4px",
-            gap: "3px",
-            minHeight: "13px",
-            width: isThird || !subject.level ? "40px" : "auto",
-            boxSizing: "border-box",
+            fontSize: "12px",
+            fontWeight: 800,
+            color: t.fg,
+            background: "rgba(255,255,255,0.7)",
+            padding: "2px 8px",
+            borderRadius: "6px",
+            border: `1px solid ${t.border}`,
           }}
         >
-          {!(isThird || !subject.level) && (
-            <span
-              style={{
-                display: "inline-block",
-                width: "4px",
-                height: "4px",
-                borderRadius: "50%",
-                background: "#0d9488",
-              }}
-            />
-          )}
-          {isThird || !subject.level ? "\u00A0" : `${subject.level}-etap`}
-        </span>
+          {balText} bal
+        </div>
       )}
 
-      {/* Line 3 (9-11): the student's actual subject name for this block \u2014 secondary, dim */}
-      {is911 && (
-        <span
+      {is911 && subject.subjectName && (
+        <div
           style={{
-            display: "inline-block",
-            alignSelf: "center",
-            maxWidth: "100%",
-            fontSize: "8px",
+            fontSize: "10px",
             fontWeight: 700,
-            letterSpacing: "0.01em",
-            textAlign: "center",
-            color: subject.subjectName ? "rgba(71, 85, 105, 0.8)" : "transparent",
-            background: subject.subjectName
-              ? "rgba(255, 255, 255, 0.55)"
-              : "rgba(255, 255, 255, 0.2)",
-            border: subject.subjectName
-              ? "1px solid rgba(255, 255, 255, 0.8)"
-              : "1px dashed rgba(203, 213, 225, 0.45)",
-            boxShadow: subject.subjectName ? "inset 0 1px 0 rgba(255, 255, 255, 0.7)" : "none",
-            borderRadius: "5px",
-            padding: "0.5px 6px",
-            marginTop: "5px",
-            minHeight: "12px",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            boxSizing: "border-box",
+            color: "#64748b",
+            textTransform: "uppercase",
+            marginTop: "2px",
           }}
         >
-          {subject.subjectName || "\u00A0"}
-        </span>
+          {subject.subjectName}
+        </div>
+      )}
+      {!is911 && !isThird && subject.level && (
+        <div style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", marginTop: "2px" }}>
+          {subject.level}-etap
+        </div>
       )}
     </div>
   );
