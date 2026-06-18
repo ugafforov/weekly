@@ -1656,62 +1656,127 @@ function SubjectCell({
 
   const balText = is911 ? subject.resultText : subject.score;
 
+  const showFanCol = is911;
+  const showLevelCol = !is911 && !isThird;
+
+  const gridColsSubject = showFanCol
+    ? "1fr 1fr 1fr 1.5fr"
+    : showLevelCol
+      ? "1fr 1fr 1fr 1fr"
+      : "1fr 1fr 1fr";
+
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "8px 6px",
+        display: "grid",
+        gridTemplateColumns: gridColsSubject,
+        alignItems: "stretch",
         background: subject.tone !== "none" ? t.bg : "transparent",
         borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+        boxShadow: subject.tone !== "none" ? "inset 0 1px 0 rgba(255, 255, 255, 0.6)" : "none",
         height: "100%",
         boxSizing: "border-box",
-        gap: "6px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-        <span style={{ fontSize: "15px", fontWeight: 800, color: t.fg }}>
-          {subject.correct !== null ? `${subject.correct} / ${subject.totalQuestions}` : "—"}
-        </span>
-        {subject.correct !== null && (
-          <span style={{ fontSize: "13px", fontWeight: 700, color: t.sub }}>{percentText}</span>
+      {/* 1) Nechta topilgani */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          borderRight: "1px solid rgba(255,255,255,0.4)",
+          fontSize: "16px",
+          fontWeight: 800,
+          color: t.fg,
+        }}
+      >
+        {subject.correct !== null ? subject.correct : "—"}
+      </div>
+
+      {/* 2) Foizi */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          borderRight: "1px solid rgba(255,255,255,0.4)",
+          fontSize: "12.5px",
+          fontWeight: 800,
+          color: t.sub,
+        }}
+      >
+        {subject.correct !== null ? percentText : "—"}
+      </div>
+
+      {/* 3) Bali */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          borderRight: showFanCol || showLevelCol ? "1px solid rgba(255,255,255,0.4)" : "none",
+        }}
+      >
+        {subject.correct !== null && balText && balText !== "—" ? (
+          <div
+            style={{
+              fontSize: "12px",
+              fontWeight: 800,
+              color: t.fg,
+              background: "rgba(255,255,255,0.7)",
+              padding: "2px 6px",
+              borderRadius: "5px",
+              border: `1px solid ${t.border}`,
+            }}
+          >
+            {balText}
+          </div>
+        ) : (
+          <span style={{ fontSize: "12.5px", fontWeight: 800, color: t.sub }}>—</span>
         )}
       </div>
 
-      {subject.correct !== null && balText && balText !== "—" && (
+      {/* 4) Fan/Bosqich */}
+      {showFanCol && (
         <div
           style={{
-            fontSize: "12px",
-            fontWeight: 800,
-            color: t.fg,
-            background: "rgba(255,255,255,0.7)",
-            padding: "2px 8px",
-            borderRadius: "6px",
-            border: `1px solid ${t.border}`,
-          }}
-        >
-          {balText} bal
-        </div>
-      )}
-
-      {is911 && subject.subjectName && (
-        <div
-          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
             fontSize: "10px",
             fontWeight: 700,
             color: "#64748b",
             textTransform: "uppercase",
-            marginTop: "2px",
+            padding: "0 6px",
+            textAlign: "center",
+            lineHeight: 1.1,
           }}
         >
-          {subject.subjectName}
+          {subject.subjectName || "—"}
         </div>
       )}
-      {!is911 && !isThird && subject.level && (
-        <div style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", marginTop: "2px" }}>
-          {subject.level}-etap
+      {showLevelCol && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 4px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "10.5px",
+              fontWeight: 800,
+              color: "#475569",
+              background: "rgba(255,255,255,0.5)",
+              padding: "2px 4px",
+              borderRadius: "4px",
+              border: "1px solid rgba(255,255,255,0.6)",
+            }}
+          >
+            {subject.level ? `${subject.level}-etap` : "—"}
+          </div>
         </div>
       )}
     </div>
@@ -1861,8 +1926,8 @@ function ClassReport({
 
   /* Column widths: №  Name  Sub1  Sub2  Mid  Sub3/3-fan  INTIZOM  JAMI */
   const GRID_COLS = is911
-    ? "46px 440px 160px 160px 160px 100px 130px 80px"
-    : "46px 440px 160px 160px 100px 160px 130px 80px";
+    ? "46px 310px 200px 200px 200px 100px 130px 90px"
+    : "46px 310px 200px 200px 100px 200px 130px 90px";
 
   /* ── Inline style constants ── */
   const hdrCell: React.CSSProperties = {
@@ -2164,22 +2229,143 @@ function ClassReport({
               O'QUVCHI
             </div>
             {headerMains.map((l, idx) => {
-              const blokBal = is911 ? ((["3.1", "2.1", "1.1", ""] as const)[idx] ?? "") : "";
+              const isMid = l === midLabel;
+              let subIdx = idx;
+              if (idx > midAfter - 1) subIdx = idx - 1;
+              const subj = isMid ? null : students[0]?.subjects[subIdx];
+              const totalQ =
+                subj?.totalQuestions ?? (is911 ? (subIdx === 2 ? 10 : 15) : subIdx === 2 ? 10 : 15);
+              const showFanCol = is911 && !isMid;
+              const showLevelCol = !is911 && !isMid && subIdx !== 2;
+
+              const gridColsSubject = showFanCol
+                ? "1fr 1fr 1fr 1.5fr"
+                : showLevelCol
+                  ? "1fr 1fr 1fr 1fr"
+                  : "1fr 1fr 1fr";
+
               return (
-                <div key={`h${idx}`} style={{ ...hdrCell, flexDirection: "column", gap: "4px" }}>
-                  <span>{l}</span>
-                  {blokBal && (
-                    <span
+                <div
+                  key={`h${idx}`}
+                  style={{ ...hdrCell, flexDirection: "column", padding: "0", gap: 0 }}
+                >
+                  {isMid ? (
+                    <div
                       style={{
-                        fontSize: "9.5px",
-                        fontWeight: 700,
-                        color: "#f6d98a",
-                        letterSpacing: "0.04em",
-                        opacity: 0.9,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "100%",
+                        height: "100%",
                       }}
                     >
-                      {blokBal} bal
-                    </span>
+                      <span>{l}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        style={{
+                          padding: "6px 0",
+                          borderBottom: "1px solid rgba(255,255,255,0.12)",
+                          width: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "2px",
+                        }}
+                      >
+                        <span style={{ fontSize: "11px", letterSpacing: "0.02em" }}>{l}</span>
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            color: "rgba(255,255,255,0.7)",
+                            fontWeight: 600,
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          {totalQ} ta savol
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: gridColsSubject,
+                          width: "100%",
+                          flex: 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRight: "1px solid rgba(255,255,255,0.12)",
+                            fontSize: "8.5px",
+                            fontWeight: 800,
+                            color: "rgba(255,255,255,0.8)",
+                          }}
+                        >
+                          TO'G'RI
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRight: "1px solid rgba(255,255,255,0.12)",
+                            fontSize: "8.5px",
+                            fontWeight: 800,
+                            color: "rgba(255,255,255,0.8)",
+                          }}
+                        >
+                          FOIZI
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "8.5px",
+                            fontWeight: 800,
+                            color: "rgba(255,255,255,0.8)",
+                            borderRight:
+                              showFanCol || showLevelCol
+                                ? "1px solid rgba(255,255,255,0.12)"
+                                : "none",
+                          }}
+                        >
+                          BALI
+                        </div>
+                        {showFanCol && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "8.5px",
+                              fontWeight: 800,
+                              color: "rgba(255,255,255,0.8)",
+                            }}
+                          >
+                            FAN
+                          </div>
+                        )}
+                        {showLevelCol && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "8.5px",
+                              fontWeight: 800,
+                              color: "rgba(255,255,255,0.8)",
+                            }}
+                          >
+                            BOSQICH
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               );
