@@ -1,4 +1,26 @@
 import * as XLSX from "xlsx-js-style";
+import {
+  text,
+  norm,
+  isNameHeader,
+  isClassHeader,
+  isNumberHeader,
+  isTeacher,
+  isId,
+  isLevel,
+  isCorrect,
+  isResult,
+  isBal58,
+  isAvg58,
+  isFani,
+  isJami,
+  isBal911,
+  isDiscipline,
+  isTotal,
+  modeOf,
+  discMeta,
+  toneFromRatio,
+} from "./rating-utils";
 import type {
   DisciplineMark,
   NormalizedStudent,
@@ -9,33 +31,6 @@ import type {
   SummaryItem,
   Tone,
 } from "./rating-types";
-
-/* ─── Text helpers ─────────────────────────────────────────────── */
-const text = (value: unknown) => String(value ?? "").trim();
-const norm = (value: unknown) =>
-  text(value)
-    .toLocaleLowerCase()
-    .replace(/[’ʻ`‘]/g, "'")
-    .replace(/\s+/g, " ");
-
-/* ─── Header detectors ─────────────────────────────────────────── */
-const isNameHeader = (v: unknown) => /familiya|family|o'?quvchi|student|ism/.test(norm(v));
-const isClassHeader = (v: unknown) => /(^|\s)(sinf|class)($|\s)/.test(norm(v));
-const isNumberHeader = (v: unknown) => /^(№|no|nº|t\/r|t\.r)$/i.test(text(v));
-
-/* ─── Column-role detectors (work on normalized header label) ──── */
-const isTeacher = (n: string) => /ustoz/.test(n);
-const isId = (n: string) => /^id$/.test(n);
-const isLevel = (n: string) => /level|etap/.test(n);
-const isCorrect = (n: string) => /javob/.test(n);
-const isResult = (n: string) => /^natijasi$/.test(n);
-const isBal58 = (n: string) => /natija uchun bal/.test(n);
-const isAvg58 = (n: string) => /o'rtacha bal|imtixon o'rtacha/.test(n);
-const isFani = (n: string) => /fani/.test(n);
-const isJami = (n: string) => /jami natija/.test(n);
-const isBal911 = (n: string) => /berilgan bal/.test(n);
-const isDiscipline = (n: string) => /davomat|kech|vazifa|odob|axloq|ahloq/.test(n);
-const isTotal = (n: string) => /\d+\s*-?\s*hafta/.test(n);
 
 /* ─── Cell helpers ─────────────────────────────────────────────── */
 type Cell = XLSX.CellObject | undefined;
@@ -87,41 +82,6 @@ function mergedValue(sheet: XLSX.WorkSheet, row: number, col: number): unknown {
   return merge ? cellAt(sheet, merge.s.r, merge.s.c)?.v : undefined;
 }
 
-const DISC_SHORT: Array<[RegExp, string, string]> = [
-  [/davomat/, "D", "Davomat"],
-  [/kech/, "K", "Kech qolmaslik"],
-  [/vazifa/, "V", "Uyga vazifa"],
-  [/odob|axloq|ahloq/, "O", "Odob-axloq"],
-];
-const discMeta = (n: string): { short: string; label: string } => {
-  for (const [re, short, label] of DISC_SHORT) if (re.test(n)) return { short, label };
-  return { short: "?", label: n };
-};
-
-/** Most frequent non-empty value (the student's true ID). Ties keep first seen. */
-function modeOf(values: string[]): string {
-  const counts: Record<string, number> = {};
-  let best = "";
-  let bestN = 0;
-  for (const v of values) {
-    if (!v) continue;
-    counts[v] = (counts[v] ?? 0) + 1;
-    if (counts[v] > bestN) {
-      bestN = counts[v];
-      best = v;
-    }
-  }
-  return best;
-}
-
-const toneFromRatio = (ratio: number | null): Tone => {
-  if (ratio === null) return "none";
-  if (ratio >= 0.6) return "high";
-  if (ratio >= 0.34) return "mid";
-  if (ratio > 0) return "low";
-  return "none";
-};
-
 /* ─── Column layout per sheet ──────────────────────────────────── */
 interface OrderedCol {
   c: number;
@@ -157,9 +117,10 @@ interface SheetLayout {
 
 function buildLayout(sheet: XLSX.WorkSheet): SheetLayout | null {
   const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1:A1");
-  const visibleCols = Array.from({ length: range.e.c - range.s.c + 1 }, (_, i) => range.s.c + i).filter(
-    (col) => !sheet["!cols"]?.[col]?.hidden,
-  );
+  const visibleCols = Array.from(
+    { length: range.e.c - range.s.c + 1 },
+    (_, i) => range.s.c + i,
+  ).filter((col) => !sheet["!cols"]?.[col]?.hidden);
 
   // Locate header row: must contain both a name and a class header.
   let headerRow = -1;
@@ -223,7 +184,18 @@ function buildLayout(sheet: XLSX.WorkSheet): SheetLayout | null {
     });
     const jamiCol = dataCols.find((d) => isJami(d.n))?.c;
     const balCol = dataCols.find((d) => isBal911(d.n))?.c;
-    return { kind, nameCol, classCol, totalCol, subjects, jamiCol, balCol, discCols, idCols, visibleCols };
+    return {
+      kind,
+      nameCol,
+      classCol,
+      totalCol,
+      subjects,
+      jamiCol,
+      balCol,
+      discCols,
+      idCols,
+      visibleCols,
+    };
   }
 
   // ── 5-8 layout ──
@@ -277,7 +249,9 @@ function buildStudent(
   layout: SheetLayout,
 ): NormalizedStudent | null {
   const name = text(cellAt(sheet, row, layout.nameCol)?.v);
-  const className = text(cellAt(sheet, row, layout.classCol)?.v).replace(/\s/g, "").toUpperCase();
+  const className = text(cellAt(sheet, row, layout.classCol)?.v)
+    .replace(/\s/g, "")
+    .toUpperCase();
   if (!name || !/^\d{1,2}[A-ZА-Я]?$/.test(className)) return null;
 
   const rowStatuses = layout.visibleCols.map((c) => colorKind(cellAt(sheet, row, c)));
@@ -293,11 +267,19 @@ function buildStudent(
 
   const subjects: SubjectResult[] = layout.subjects.map((def) => {
     const resultCell = cellAt(sheet, row, def.resultCol);
-    const correct = def.correctCol !== undefined ? rawNum(cellAt(sheet, row, def.correctCol)) : null;
+    const correct =
+      def.correctCol !== undefined ? rawNum(cellAt(sheet, row, def.correctCol)) : null;
     const id = def.idCol !== undefined ? fmt(cellAt(sheet, row, def.idCol)) : "";
     // ID error is flagged two ways: a manual colour marker on any of the subject's
     // cells (the teacher highlights it before upload), or a detectable ID mismatch.
-    const subjectCols = [def.idCol, def.resultCol, def.correctCol, def.balCol, def.levelCol, def.faniCol];
+    const subjectCols = [
+      def.idCol,
+      def.resultCol,
+      def.correctCol,
+      def.balCol,
+      def.levelCol,
+      def.faniCol,
+    ];
     const colorMark = subjectCols.some(
       (c) => c !== undefined && colorKind(cellAt(sheet, row, c)) === "wrong-id",
     );
@@ -312,7 +294,10 @@ function buildStudent(
       const ratio = correct !== null ? correct / totalQ : percent !== null ? percent / 100 : null;
       return {
         label: def.label,
-        teacher: def.teacherCol !== undefined ? fmt(cellAt(sheet, row, def.teacherCol)) || undefined : undefined,
+        teacher:
+          def.teacherCol !== undefined
+            ? text(mergedValue(sheet, row, def.teacherCol)) || undefined
+            : undefined,
         percent,
         resultText: percent !== null ? `${percent}%` : "—",
         correct,
@@ -467,7 +452,14 @@ export function createSegmentedWorkbook(data: RatingWorkbook, classes: string[])
     const subjectHeaders = sample.subjects.map((s) => s.label);
     const summaryHeaders = sample.summary.map((s) => s.label.toUpperCase());
     const discHeaders = sample.discipline.map((d) => d.short);
-    const headers = ["№", "FAMILIYA ISM", ...subjectHeaders, ...summaryHeaders, ...discHeaders, "JAMI"];
+    const headers = [
+      "№",
+      "FAMILIYA ISM",
+      ...subjectHeaders,
+      ...summaryHeaders,
+      ...discHeaders,
+      "JAMI",
+    ];
 
     const rows = classStudents.map((student, index) => [
       index + 1,
@@ -495,7 +487,11 @@ export function createSegmentedWorkbook(data: RatingWorkbook, classes: string[])
         const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
         if (!cell) continue;
         cell.s = {
-          font: { name: "Arial", bold: row <= 4, color: { rgb: row === 4 ? "FFFFFFFF" : "FF17201E" } },
+          font: {
+            name: "Arial",
+            bold: row <= 4,
+            color: { rgb: row === 4 ? "FFFFFFFF" : "FF17201E" },
+          },
           alignment: {
             horizontal: row <= 4 ? "center" : col === 1 ? "left" : "center",
             vertical: "center",
