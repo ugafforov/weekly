@@ -105,9 +105,7 @@ export function AuthForm() {
         }}
         className="mt-4 w-full text-center text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
       >
-        {mode === "signin"
-          ? "Hisobingiz yo'qmi? Ro'yxatdan o'ting"
-          : "Hisobingiz bormi? Kiring"}
+        {mode === "signin" ? "Hisobingiz yo'qmi? Ro'yxatdan o'ting" : "Hisobingiz bormi? Kiring"}
       </button>
     </div>
   );

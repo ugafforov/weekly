@@ -10,12 +10,12 @@ import { getFirestore } from "firebase/firestore";
  * Security Rules and the project's Authorized Domains, not by hiding this config.
  */
 const firebaseConfig = {
-  apiKey: "AIzaSyAMZBTPUtLg_-FSdbgkBfVkZ73kG2PkC7M",
-  authDomain: "weekly-9dfdc.firebaseapp.com",
-  projectId: "weekly-9dfdc",
-  storageBucket: "weekly-9dfdc.firebasestorage.app",
-  messagingSenderId: "892443429193",
-  appId: "1:892443429193:web:e189a565655622f050f298",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Reuse the existing app on hot-reload / repeated imports.
