@@ -148,10 +148,10 @@ function buildRedRows(students: NormalizedStudent[], kind: "5-8" | "9-11"): RedR
 }
 
 const TONE: Record<Tone, { bg: string; border: string; fg: string; sub: string; bar: string }> = {
-  high: { bg: "#e9f9f0", border: "#b6ebcf", fg: "#047857", sub: "#0f9d6b", bar: "#16a34a" },
-  mid: { bg: "#fff5e6", border: "#ffdfb0", fg: "#b45309", sub: "#c97a10", bar: "#f59e0b" },
-  low: { bg: "#fdeeee", border: "#f6c9c9", fg: "#c0392b", sub: "#d65a4a", bar: "#ef4444" },
-  none: { bg: "#f1f5f9", border: "#e2e8f0", fg: "#94a3b8", sub: "#b4bfcc", bar: "#cbd5e1" },
+  high: { bg: "transparent", border: "#e2e8f0", fg: "#0f172a", sub: "#64748b", bar: "#e2e8f0" },
+  mid: { bg: "transparent", border: "#e2e8f0", fg: "#0f172a", sub: "#64748b", bar: "#e2e8f0" },
+  low: { bg: "transparent", border: "#e2e8f0", fg: "#0f172a", sub: "#64748b", bar: "#e2e8f0" },
+  none: { bg: "transparent", border: "#e2e8f0", fg: "#94a3b8", sub: "#94a3b8", bar: "#e2e8f0" },
 };
 
 const loadWorkbookTools = createClientOnlyFn(() => import("@/lib/rating-workbook.client"));
@@ -1577,7 +1577,6 @@ function SubjectCell({
 }) {
   const t = TONE[subject.tone];
 
-  /* ID error */
   if (subject.idError) {
     return (
       <div
@@ -1586,7 +1585,6 @@ function SubjectCell({
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          padding: "7px 10px",
           background:
             "linear-gradient(180deg, rgba(254, 245, 207, 0.9) 0%, rgba(253, 234, 170, 0.62) 100%)",
           borderRight: "1px solid rgba(203, 213, 225, 0.45)",
@@ -1607,7 +1605,6 @@ function SubjectCell({
             display: "inline-flex",
             alignItems: "center",
             gap: "3px",
-            boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0,0,0,0.03)",
           }}
         >
           ⚠ ID xato kiritilgan
@@ -1616,7 +1613,6 @@ function SubjectCell({
     );
   }
 
-  /* Absent */
   if (!subject.present) {
     return (
       <div
@@ -1625,7 +1621,6 @@ function SubjectCell({
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          padding: "7px 10px",
           background:
             "linear-gradient(180deg, rgba(248, 250, 252, 0.85) 0%, rgba(238, 242, 247, 0.55) 100%)",
           borderRight: "1px solid rgba(203, 213, 225, 0.45)",
@@ -1660,9 +1655,9 @@ function SubjectCell({
   const showLevelCol = !is911 && !isThird;
 
   const gridColsSubject = showFanCol
-    ? "1fr 1fr 1fr 1.5fr"
+    ? "1.5fr 1fr 1fr 1fr"
     : showLevelCol
-      ? "1fr 1fr 1fr 1fr"
+      ? "1.2fr 1fr 1fr 1fr"
       : "1fr 1fr 1fr";
 
   return (
@@ -1671,81 +1666,38 @@ function SubjectCell({
         display: "grid",
         gridTemplateColumns: gridColsSubject,
         alignItems: "stretch",
-        background: subject.tone !== "none" ? t.bg : "transparent",
+        background: "transparent",
         borderRight: "1px solid rgba(203, 213, 225, 0.45)",
-        boxShadow: subject.tone !== "none" ? "inset 0 1px 0 rgba(255, 255, 255, 0.6)" : "none",
         height: "100%",
         boxSizing: "border-box",
       }}
     >
-      {/* 1) Nechta topilgani */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          borderRight: "1px solid rgba(255,255,255,0.4)",
-          fontSize: "16px",
-          fontWeight: 800,
-          color: t.fg,
-        }}
-      >
-        {subject.correct !== null ? subject.correct : "—"}
-      </div>
-
-      {/* 2) Foizi */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          borderRight: "1px solid rgba(255,255,255,0.4)",
-          fontSize: "12.5px",
-          fontWeight: 800,
-          color: t.sub,
-        }}
-      >
-        {subject.correct !== null ? percentText : "—"}
-      </div>
-
-      {/* 3) Bali */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          borderRight: showFanCol || showLevelCol ? "1px solid rgba(255,255,255,0.4)" : "none",
-        }}
-      >
-        {subject.correct !== null && balText && balText !== "—" ? (
-          <div
-            style={{
-              fontSize: "12px",
-              fontWeight: 800,
-              color: t.fg,
-              background: "rgba(255,255,255,0.7)",
-              padding: "2px 6px",
-              borderRadius: "5px",
-              border: `1px solid ${t.border}`,
-            }}
-          >
-            {balText}
+      {/* 1) Bosqich or Fan */}
+      {showLevelCol && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+            padding: "0 4px",
+          }}
+        >
+          <div style={{ fontSize: "12px", fontWeight: 700, color: "#475569" }}>
+            {subject.level ? `${subject.level}-etap` : "—"}
           </div>
-        ) : (
-          <span style={{ fontSize: "12.5px", fontWeight: 800, color: t.sub }}>—</span>
-        )}
-      </div>
-
-      {/* 4) Fan/Bosqich */}
+        </div>
+      )}
       {showFanCol && (
         <div
           style={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            fontSize: "10px",
+            borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+            fontSize: "10.5px",
             fontWeight: 700,
-            color: "#64748b",
+            color: "#475569",
             textTransform: "uppercase",
             padding: "0 6px",
             textAlign: "center",
@@ -1755,30 +1707,45 @@ function SubjectCell({
           {subject.subjectName || "—"}
         </div>
       )}
-      {showLevelCol && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 4px",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "10.5px",
-              fontWeight: 800,
-              color: "#475569",
-              background: "rgba(255,255,255,0.5)",
-              padding: "2px 4px",
-              borderRadius: "4px",
-              border: "1px solid rgba(255,255,255,0.6)",
-            }}
-          >
-            {subject.level ? `${subject.level}-etap` : "—"}
-          </div>
-        </div>
-      )}
+
+      {/* 2) Nechta topilgani */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+          fontSize: "13px",
+          fontWeight: 700,
+          color: "#0f172a",
+        }}
+      >
+        {subject.correct !== null ? subject.correct : "—"}
+      </div>
+
+      {/* 3) Foizi */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+          fontSize: "13px",
+          fontWeight: 700,
+          color: "#0f172a",
+        }}
+      >
+        {subject.correct !== null ? percentText : "—"}
+      </div>
+
+      {/* 4) Bali */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+        {subject.correct !== null && balText && balText !== "—" ? (
+          <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>{balText}</span>
+        ) : (
+          <span style={{ fontSize: "13px", fontWeight: 700, color: "#94a3b8" }}>—</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -2239,9 +2206,9 @@ function ClassReport({
               const showLevelCol = !is911 && !isMid && subIdx !== 2;
 
               const gridColsSubject = showFanCol
-                ? "1fr 1fr 1fr 1.5fr"
+                ? "1.5fr 1fr 1fr 1fr"
                 : showLevelCol
-                  ? "1fr 1fr 1fr 1fr"
+                  ? "1.2fr 1fr 1fr 1fr"
                   : "1fr 1fr 1fr";
 
               return (
@@ -2294,6 +2261,36 @@ function ClassReport({
                           flex: 1,
                         }}
                       >
+                        {showLevelCol && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "8.5px",
+                              fontWeight: 800,
+                              color: "rgba(255,255,255,0.8)",
+                              borderRight: "1px solid rgba(255,255,255,0.12)",
+                            }}
+                          >
+                            BOSQICH
+                          </div>
+                        )}
+                        {showFanCol && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "8.5px",
+                              fontWeight: 800,
+                              color: "rgba(255,255,255,0.8)",
+                              borderRight: "1px solid rgba(255,255,255,0.12)",
+                            }}
+                          >
+                            FAN
+                          </div>
+                        )}
                         <div
                           style={{
                             display: "flex",
@@ -2328,42 +2325,10 @@ function ClassReport({
                             fontSize: "8.5px",
                             fontWeight: 800,
                             color: "rgba(255,255,255,0.8)",
-                            borderRight:
-                              showFanCol || showLevelCol
-                                ? "1px solid rgba(255,255,255,0.12)"
-                                : "none",
                           }}
                         >
                           BALI
                         </div>
-                        {showFanCol && (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "8.5px",
-                              fontWeight: 800,
-                              color: "rgba(255,255,255,0.8)",
-                            }}
-                          >
-                            FAN
-                          </div>
-                        )}
-                        {showLevelCol && (
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "8.5px",
-                              fontWeight: 800,
-                              color: "rgba(255,255,255,0.8)",
-                            }}
-                          >
-                            BOSQICH
-                          </div>
-                        )}
                       </div>
                     </>
                   )}
