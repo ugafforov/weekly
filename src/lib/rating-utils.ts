@@ -23,7 +23,9 @@ export const isFani = (n: string) => /fani/.test(n);
 export const isJami = (n: string) => /jami natija/.test(n);
 export const isBal911 = (n: string) => /berilgan bal/.test(n);
 export const isDiscipline = (n: string) => /davomat|kech|vazifa|odob|axloq|ahloq/.test(n);
-export const isTotal = (n: string) => /jami|total|umumiy/i.test(n);
+export const isTotal = (n: string) => /\d[- ]?hafta|jami|total|umumiy/i.test(n);
+/** Specifically matches a "N-HAFTA" column like "6-HAFTA" — the final weekly score. */
+export const isHafta = (n: string) => /\d[- ]?hafta/.test(n);
 /* ─── Cell helpers ─────────────────────────────────────────────── */
 export const DISC_SHORT: Array<[RegExp, string, string]> = [
   [/davomat/, "D", "Davomat"],

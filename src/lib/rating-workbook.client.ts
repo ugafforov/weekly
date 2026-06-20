@@ -17,6 +17,7 @@ import {
   isBal911,
   isDiscipline,
   isTotal,
+  isHafta,
   modeOf,
   discMeta,
   toneFromRatio,
@@ -145,8 +146,14 @@ function buildLayout(sheet: XLSX.WorkSheet): SheetLayout | null {
       return { c, label, n: norm(label) };
     });
 
+  /* Prefer a "hafta" column (e.g. "6-HAFTA") as the final weekly total.
+     Fall back to any generic "jami/total/umumiy" match, then to the last data column. */
   const totalIdx = (() => {
+    // 1) Prefer the hafta column (the actual final weekly score)
+    for (let i = dataCols.length - 1; i >= 0; i -= 1) if (isHafta(dataCols[i].n)) return i;
+    // 2) Fall back to jami/total/umumiy
     for (let i = dataCols.length - 1; i >= 0; i -= 1) if (isTotal(dataCols[i].n)) return i;
+    // 3) Last resort: last column
     return dataCols.length - 1;
   })();
   const totalCol = dataCols[totalIdx]?.c ?? classCol;
@@ -354,7 +361,15 @@ function buildStudent(
   const disciplineTotal = discipline.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
 
   const totalCell = cellAt(sheet, row, layout.totalCol);
-  const total = rawNum(totalCell) ?? 0;
+  // Try rawNum first, then fall back to parsing the formatted text (formula cells
+  // may only have cell.w populated when the workbook comes from Google Sheets).
+  let total = rawNum(totalCell);
+  if (total === null && totalCell) {
+    const w = String(totalCell.w ?? "").replace(",", ".");
+    const parsed = parseFloat(w);
+    if (Number.isFinite(parsed)) total = parsed;
+  }
+  total = total ?? 0;
   const examScore = Math.round((total - disciplineTotal) * 100) / 100;
 
   // Status priority: explicit colour → ID mismatch → no exams sat (absent).

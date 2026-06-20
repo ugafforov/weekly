@@ -1399,105 +1399,107 @@ function UploadScreen({
       />
 
       {/* Auth form (toggle) */}
-      {!user && showAuth && (
+      {!user && showAuth ? (
         <div className="mb-6 w-full max-w-sm">
           <AuthForm />
         </div>
-      )}
-
-      <div
-        className={`upload-card ${isDragging ? "upload-card-drag" : ""}`}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onClick={onChoose}
-      >
-        <div className={`upload-icon-wrap ${isDragging ? "upload-icon-drag" : ""}`}>
-          {busy === "upload" ? (
-            <LoaderCircle className="size-8 animate-spin text-primary" />
-          ) : (
-            <FileSpreadsheet className="size-8 text-primary" />
-          )}
-        </div>
-        <div className="mt-4 text-center">
-          <p className="text-base font-bold text-foreground">
-            {isDragging ? "Fayl qo'yish uchun tashlang" : "Excel fayl yuklang"}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Faylni bu yerga sudrab tashlang yoki bosing
-          </p>
-          <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
-            .xlsx / .xls
-          </p>
-        </div>
-        <div className="mt-5 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90">
-          <Upload className="size-4" />
-          Faylni tanlash
-          <ChevronRight className="size-3.5 opacity-70" />
-        </div>
-      </div>
-
-      <div className="mt-6 flex flex-wrap justify-center gap-2">
-        {["5–8 sinf", "9–11 sinf", "Umumiy reyting", "Telegram PNG", "PDF eksport"].map((f) => (
-          <span
-            key={f}
-            className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm"
+      ) : (
+        <>
+          <div
+            className={`upload-card ${isDragging ? "upload-card-drag" : ""}`}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onClick={onChoose}
           >
-            {f}
-          </span>
-        ))}
-      </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDemo();
-        }}
-        className="mt-4 text-xs text-muted-foreground underline underline-offset-2 opacity-60 transition-opacity hover:opacity-100"
-      >
-        Demo ko'rish →
-      </button>
+            <div className={`upload-icon-wrap ${isDragging ? "upload-icon-drag" : ""}`}>
+              {busy === "upload" ? (
+                <LoaderCircle className="size-8 animate-spin text-primary" />
+              ) : (
+                <FileSpreadsheet className="size-8 text-primary" />
+              )}
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-base font-bold text-foreground">
+                {isDragging ? "Fayl qo'yish uchun tashlang" : "Excel fayl yuklang"}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Faylni bu yerga sudrab tashlang yoki bosing
+              </p>
+              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
+                .xlsx / .xls
+              </p>
+            </div>
+            <div className="mt-5 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90">
+              <Upload className="size-4" />
+              Faylni tanlash
+              <ChevronRight className="size-3.5 opacity-70" />
+            </div>
+          </div>
 
-      {/* Saved reports history */}
-      {user && savedReports.length > 0 && (
-        <div className="mt-8 w-full max-w-sm">
-          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            <History className="size-3.5" />
-            Saqlangan hisobotlar
-          </p>
-          <div className="flex flex-col gap-2">
-            {savedReports.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-card/80 px-4 py-2.5 shadow-sm backdrop-blur-sm"
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {["5–8 sinf", "9–11 sinf", "Umumiy reyting", "Telegram PNG", "PDF eksport"].map((f) => (
+              <span
+                key={f}
+                className="rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm"
               >
-                <button
-                  className="flex flex-col items-start gap-0.5 text-left"
-                  onClick={() => onOpenReport(r.id)}
-                  disabled={busyLoad}
-                >
-                  <span className="text-sm font-bold text-primary hover:underline">{r.date}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {r.studentCount} o'quvchi · {r.fileName}
-                  </span>
-                </button>
-                <button
-                  className="ml-3 text-muted-foreground/50 hover:text-destructive"
-                  onClick={() => onDeleteReport(r.id)}
-                  title="O'chirish"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
+                {f}
+              </span>
             ))}
           </div>
-        </div>
-      )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDemo();
+            }}
+            className="mt-4 text-xs text-muted-foreground underline underline-offset-2 opacity-60 transition-opacity hover:opacity-100"
+          >
+            Demo ko'rish →
+          </button>
 
-      {error && (
-        <div className="mt-5 flex max-w-sm items-start gap-3 rounded-xl border border-coral-soft/50 bg-coral-soft/60 px-4 py-3">
-          <span className="mt-0.5 text-base">⚠️</span>
-          <p className="text-sm font-semibold text-coral-foreground">{error}</p>
-        </div>
+          {/* Saved reports history */}
+          {user && savedReports.length > 0 && (
+            <div className="mt-8 w-full max-w-sm">
+              <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                <History className="size-3.5" />
+                Saqlangan hisobotlar
+              </p>
+              <div className="flex flex-col gap-2">
+                {savedReports.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between rounded-xl border border-border bg-card/80 px-4 py-2.5 shadow-sm backdrop-blur-sm"
+                  >
+                    <button
+                      className="flex flex-col items-start gap-0.5 text-left"
+                      onClick={() => onOpenReport(r.id)}
+                      disabled={busyLoad}
+                    >
+                      <span className="text-sm font-bold text-primary hover:underline">{r.date}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {r.studentCount} o'quvchi · {r.fileName}
+                      </span>
+                    </button>
+                    <button
+                      className="ml-3 text-muted-foreground/50 hover:text-destructive"
+                      onClick={() => onDeleteReport(r.id)}
+                      title="O'chirish"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-5 flex max-w-sm items-start gap-3 rounded-xl border border-coral-soft/50 bg-coral-soft/60 px-4 py-3">
+              <span className="mt-0.5 text-base">⚠️</span>
+              <p className="text-sm font-semibold text-coral-foreground">{error}</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
