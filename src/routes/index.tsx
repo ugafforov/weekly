@@ -2133,8 +2133,8 @@ function ClassReport({
     headerMains.push(l);
     if (i === midAfter - 1) {
       if (is911) {
-        headerMains.push("JAMI NATIJA");
-        headerMains.push("NATIJA UCHUN BERILGAN BAL");
+        headerMains.push("NATIJA");
+        headerMains.push("NATIJA UCHUN BAL");
       } else {
         headerMains.push(midLabel);
       }
@@ -2142,7 +2142,7 @@ function ClassReport({
   });
 
   const GRID_COLS = is911
-    ? "46px 374px 170px 170px 110px 80px 80px 130px 98px"
+    ? "46px 374px 170px 170px 110px 90px 90px 130px 98px"
     : "46px 386px 190px 190px 88px 150px 130px 98px";
 
   /* ── Inline style constants ── */
@@ -2432,7 +2432,7 @@ function ClassReport({
             </div>
             {headerMains.map((l, idx) => {
               const isMid = is911
-                ? l === "JAMI NATIJA" || l === "NATIJA UCHUN BERILGAN BAL"
+                ? l === "NATIJA" || l === "NATIJA UCHUN BAL"
                 : l === midLabel;
               let subIdx = idx;
               if (is911) {
