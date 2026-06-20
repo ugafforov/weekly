@@ -404,6 +404,7 @@ function RatingDashboard() {
   const [isDragging, setIsDragging] = useState(false);
   const [savedReports, setSavedReports] = useState<ReportMeta[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
 
   useEffect(() => {
@@ -756,7 +757,17 @@ function RatingDashboard() {
                     {saveState === "saved" ? "Saqlandi" : "Bazaga saqlash"}
                   </span>
                 </Button>
-              ) : null}
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="dash-btn-outline"
+                  onClick={() => setShowAuth((v) => !v)}
+                >
+                  <LogIn />
+                  <span className="hidden sm:inline">Kirish</span>
+                </Button>
+              )}
               {user && savedReports.length > 0 && (
                 <Button
                   size="sm"
@@ -790,17 +801,26 @@ function RatingDashboard() {
               {user ? (
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="text-dash-muted"
+                  variant="outline"
+                  className="dash-btn-outline"
                   onClick={signOut}
                   title="Chiqish"
                 >
                   <LogOut className="size-4" />
+                  <span className="hidden sm:inline">Chiqish</span>
                 </Button>
               ) : null}
             </div>
           </div>
         </header>
+
+        {!user && showAuth ? (
+          <div className="no-print border-b border-dash-border bg-dash-surface/95 backdrop-blur-md">
+            <div className="mx-auto max-w-sm px-4 py-4">
+              <AuthForm />
+            </div>
+          </div>
+        ) : null}
 
         {/* History dropdown panel */}
         {showHistory && user && savedReports.length > 0 && (
