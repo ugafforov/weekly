@@ -62,6 +62,9 @@ export const Route = createFileRoute("/")({
 });
 
 /* ─── Helpers ──────────────────────────────────────────────────── */
+type ThirdSubjectGroup = "5-8" | "9-11";
+const THIRD_SUBJECT_STORAGE_KEY = "weekly-third-subjects";
+
 const classSort = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
 /** Tie-breaker: sum of subject results (percent for 5-8, correct%/15 for 9-11). Higher first. */
@@ -391,13 +394,31 @@ function RatingDashboard() {
   const reportRef = useRef<HTMLDivElement>(null);
   const [workbook, setWorkbook] = useState<RatingWorkbook>();
   const [activeClass, setActiveClass] = useState("all");
-  const [thirdSubjects, setThirdSubjects] = useState<Record<string, string>>({});
+  const [thirdSubjects, setThirdSubjects] = useState<Record<ThirdSubjectGroup, string>>({
+    "5-8": "",
+    "9-11": "",
+  });
+  const [thirdSubjectSaveState, setThirdSubjectSaveState] = useState<"idle" | "saved">("idle");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [savedReports, setSavedReports] = useState<ReportMeta[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(THIRD_SUBJECT_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<Record<ThirdSubjectGroup, string>>;
+      setThirdSubjects({
+        "5-8": typeof saved["5-8"] === "string" ? saved["5-8"] : "",
+        "9-11": typeof saved["9-11"] === "string" ? saved["9-11"] : "",
+      });
+    } catch {
+      /* Local storage may be unavailable in restricted browser modes. */
+    }
+  }, []);
 
   /* Load saved reports list when user logs in */
   useEffect(() => {
@@ -432,7 +453,9 @@ function RatingDashboard() {
     [workbook, activeClass],
   );
 
-  const thirdSubject = thirdSubjects[activeClass] ?? "";
+  const activeThirdSubjectGroup: ThirdSubjectGroup | undefined =
+    activeClass !== "all" && activeClass !== "red" ? students[0]?.kind : undefined;
+  const thirdSubject = activeThirdSubjectGroup ? thirdSubjects[activeThirdSubjectGroup] : "";
 
   const redZoneCount = useMemo(
     () =>
@@ -454,6 +477,16 @@ function RatingDashboard() {
       setError(e instanceof Error ? e.message : "Excel faylini o'qib bo'lmadi.");
     } finally {
       setBusy(undefined);
+    }
+  }
+
+  function saveThirdSubjects() {
+    try {
+      window.localStorage.setItem(THIRD_SUBJECT_STORAGE_KEY, JSON.stringify(thirdSubjects));
+      setThirdSubjectSaveState("saved");
+      window.setTimeout(() => setThirdSubjectSaveState("idle"), 1400);
+    } catch {
+      setThirdSubjectSaveState("idle");
     }
   }
 
@@ -812,19 +845,39 @@ function RatingDashboard() {
               <span className="dash-badge">{workbook.date}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {activeClass !== "all" && activeClass !== "red" && (
-                <label className="dash-input-label">
-                  <Pencil className="size-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-dash-muted">3-fan:</span>
-                  <input
-                    value={thirdSubject}
-                    onChange={(e) =>
-                      setThirdSubjects((prev) => ({ ...prev, [activeClass]: e.target.value }))
-                    }
-                    placeholder="masalan: Tarix"
-                    className="w-28 bg-transparent text-xs outline-none placeholder:text-dash-muted/50"
-                  />
-                </label>
+              {activeThirdSubjectGroup && (
+                <div className="flex items-center gap-1">
+                  <label className="dash-input-label">
+                    <Pencil className="size-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-dash-muted">
+                      {activeThirdSubjectGroup} 3-fan:
+                    </span>
+                    <input
+                      value={thirdSubject}
+                      onChange={(e) => {
+                        setThirdSubjectSaveState("idle");
+                        setThirdSubjects((prev) => ({
+                          ...prev,
+                          [activeThirdSubjectGroup]: e.target.value,
+                        }));
+                      }}
+                      placeholder="masalan: Tarix"
+                      className="w-28 bg-transparent text-xs outline-none placeholder:text-dash-muted/50"
+                    />
+                  </label>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="dash-btn-outline px-2.5"
+                    onClick={saveThirdSubjects}
+                    disabled={Boolean(busy)}
+                  >
+                    {thirdSubjectSaveState === "saved" ? <Check /> : <CloudUpload />}
+                    <span className="hidden sm:inline">
+                      {thirdSubjectSaveState === "saved" ? "Saqlandi" : "Saqlash"}
+                    </span>
+                  </Button>
+                </div>
               )}
               <Button
                 size="sm"
@@ -1595,6 +1648,10 @@ const cellCenter: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const REPORT_GRID_BORDER = "1px solid rgba(226, 232, 240, 0.72)";
+const REPORT_INNER_BORDER = "1px solid rgba(226, 232, 240, 0.58)";
+const REPORT_HEADER_BORDER = "1px solid rgba(255, 255, 255, 0.1)";
+
 /* ─── Helper for color-coded visualization based on percentage ─── */
 function getPercentColor(percent: number | null): { bg: string; text: string; border: string } {
   if (percent === null) {
@@ -1673,7 +1730,7 @@ function SubjectCell({
           alignItems: "stretch",
           background:
             "linear-gradient(180deg, rgba(254, 245, 207, 0.9) 0%, rgba(253, 234, 170, 0.62) 100%)",
-          borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+          borderRight: REPORT_GRID_BORDER,
           boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.6)",
           height: "100%",
           boxSizing: "border-box",
@@ -1685,7 +1742,7 @@ function SubjectCell({
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+              borderRight: REPORT_INNER_BORDER,
               padding: "0 4px",
             }}
           >
@@ -1700,8 +1757,8 @@ function SubjectCell({
               display: "flex",
               justifyContent: "flex-start",
               alignItems: "center",
-              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
-              fontSize: "7.5px",
+              borderRight: REPORT_INNER_BORDER,
+              fontSize: "8.5px",
               fontWeight: 800,
               color: "#b45309",
               padding: "0 6px",
@@ -1763,7 +1820,7 @@ function SubjectCell({
           alignItems: "stretch",
           background:
             "linear-gradient(180deg, rgba(248, 250, 252, 0.85) 0%, rgba(238, 242, 247, 0.55) 100%)",
-          borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+          borderRight: REPORT_GRID_BORDER,
           height: "100%",
           boxSizing: "border-box",
         }}
@@ -1774,7 +1831,7 @@ function SubjectCell({
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+              borderRight: REPORT_INNER_BORDER,
               padding: "0 4px",
             }}
           >
@@ -1789,8 +1846,8 @@ function SubjectCell({
               display: "flex",
               justifyContent: "flex-start",
               alignItems: "center",
-              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
-              fontSize: "7.5px",
+              borderRight: REPORT_INNER_BORDER,
+              fontSize: "8.5px",
               fontWeight: 800,
               color: "#64748b",
               padding: "0 6px",
@@ -1860,7 +1917,7 @@ function SubjectCell({
         gridTemplateColumns: gridColsSubject,
         alignItems: "stretch",
         background: "transparent",
-        borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+        borderRight: REPORT_GRID_BORDER,
         height: "100%",
         boxSizing: "border-box",
       }}
@@ -1872,7 +1929,7 @@ function SubjectCell({
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+            borderRight: REPORT_INNER_BORDER,
             padding: "0 4px",
           }}
         >
@@ -1887,8 +1944,8 @@ function SubjectCell({
             display: "flex",
             justifyContent: "flex-start",
             alignItems: "center",
-            borderRight: "1px solid rgba(203, 213, 225, 0.35)",
-            fontSize: "7.5px",
+            borderRight: REPORT_INNER_BORDER,
+            fontSize: "8.5px",
             fontWeight: 800,
             color: "#475569",
             padding: "0 6px",
@@ -1911,7 +1968,7 @@ function SubjectCell({
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+          borderRight: REPORT_INNER_BORDER,
           fontSize: "13px",
           fontWeight: 700,
           color: "#0f172a",
@@ -1927,7 +1984,7 @@ function SubjectCell({
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+            borderRight: REPORT_INNER_BORDER,
             fontSize: "13px",
             fontWeight: 700,
             color: colorInfo.text,
@@ -1989,7 +2046,7 @@ function DisciplineCell({ discipline }: { discipline: NormalizedStudent["discipl
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr 1fr",
         alignItems: "stretch",
-        borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+        borderRight: REPORT_GRID_BORDER,
         height: "100%",
         boxSizing: "border-box",
       }}
@@ -2004,7 +2061,7 @@ function DisciplineCell({ discipline }: { discipline: NormalizedStudent["discipl
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              borderRight: idx === 3 ? "none" : "1px solid rgba(203, 213, 225, 0.35)",
+              borderRight: idx === 3 ? "none" : REPORT_INNER_BORDER,
               fontSize: "13px",
               fontWeight: 700,
               color: d.empty ? "rgba(148, 163, 184, 0.8)" : colors.fg,
@@ -2157,7 +2214,7 @@ function ClassReport({
     letterSpacing: "0.05em",
     padding: "8px 6px",
     textAlign: "center",
-    borderRight: "1px solid rgba(255, 255, 255, 0.12)",
+    borderRight: REPORT_HEADER_BORDER,
     boxSizing: "border-box",
   };
 
@@ -2421,7 +2478,7 @@ function ClassReport({
               display: "grid",
               gridTemplateColumns: GRID_COLS,
               columnGap: "0px",
-              borderBottom: "1px solid #0b5d56",
+              borderBottom: "1px solid rgba(15, 118, 110, 0.32)",
               background: "#0c5c54",
               padding: "0",
             }}
@@ -2486,7 +2543,7 @@ function ClassReport({
                       <div
                         style={{
                           padding: "4px 0",
-                          borderBottom: "1px solid rgba(255,255,255,0.12)",
+                          borderBottom: REPORT_HEADER_BORDER,
                           width: "100%",
                           display: "flex",
                           flexDirection: "column",
@@ -2525,7 +2582,7 @@ function ClassReport({
                               fontSize: "8px",
                               fontWeight: 900,
                               color: "rgba(255,255,255,0.9)",
-                              borderRight: "1px solid rgba(255,255,255,0.12)",
+                              borderRight: REPORT_HEADER_BORDER,
                               padding: "5px 0",
                             }}
                           >
@@ -2541,7 +2598,7 @@ function ClassReport({
                               fontSize: "8px",
                               fontWeight: 900,
                               color: "rgba(255,255,255,0.9)",
-                              borderRight: "1px solid rgba(255,255,255,0.12)",
+                              borderRight: REPORT_HEADER_BORDER,
                               padding: "5px 0",
                             }}
                           >
@@ -2553,7 +2610,7 @@ function ClassReport({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            borderRight: "1px solid rgba(255,255,255,0.12)",
+                            borderRight: REPORT_HEADER_BORDER,
                             fontSize: "8px",
                             fontWeight: 900,
                             color: "rgba(255,255,255,0.9)",
@@ -2568,7 +2625,7 @@ function ClassReport({
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              borderRight: "1px solid rgba(255,255,255,0.12)",
+                              borderRight: REPORT_HEADER_BORDER,
                               fontSize: "8px",
                               fontWeight: 900,
                               color: "rgba(255,255,255,0.9)",
@@ -2609,7 +2666,7 @@ function ClassReport({
               <div
                 style={{
                   padding: "4px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.12)",
+                  borderBottom: REPORT_HEADER_BORDER,
                   width: "100%",
                   display: "flex",
                   flexDirection: "column",
@@ -2649,7 +2706,7 @@ function ClassReport({
                       fontSize: "8px",
                       fontWeight: 900,
                       color: "rgba(255,255,255,0.9)",
-                      borderRight: lIdx === 3 ? "none" : "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRight: lIdx === 3 ? "none" : REPORT_HEADER_BORDER,
                       padding: "5px 0",
                     }}
                   >
@@ -2703,7 +2760,11 @@ function ClassReport({
               const showBadge = place <= 3;
               const medal =
                 place === 1 ? "#fbbf24" : place === 2 ? "#94a3b8" : place === 3 ? "#fb923c" : null;
-              const rankBg = medal ? `${medal}18` : "transparent";
+              const rankBg = medal
+                ? `linear-gradient(145deg, rgba(255,255,255,0.92) 0%, ${medal}24 58%, ${medal}3d 100%)`
+                : absent
+                  ? "linear-gradient(145deg, rgba(248,250,252,0.9), rgba(226,232,240,0.52))"
+                  : "linear-gradient(145deg, rgba(255,255,255,0.95), rgba(241,245,249,0.74))";
               const rankBorder = medal ?? "#d1d5db";
               const rankFg =
                 place === 1
@@ -2713,19 +2774,14 @@ function ClassReport({
                     : place === 3
                       ? "#c2410c"
                       : "#64748b";
-
-              /* Row card border — slight accent for top 3 places */
-              const cardBorder = absent
-                ? "1px solid #e2e8f0"
-                : wrongId
-                  ? "1px solid #fde68a"
-                  : place === 1
-                    ? "1px solid #fde68a"
-                    : place === 2
-                      ? "1px solid #d1d5db"
-                      : place === 3
-                        ? "1px solid #fed7aa"
-                        : "1px solid #e2e8f0";
+              const rankGlow =
+                place === 1
+                  ? "0 0 0 3px rgba(251, 191, 36, 0.12), 0 4px 10px rgba(161, 98, 7, 0.08)"
+                  : place === 2
+                    ? "0 0 0 3px rgba(148, 163, 184, 0.13), 0 4px 10px rgba(71, 85, 105, 0.07)"
+                    : place === 3
+                      ? "0 0 0 3px rgba(251, 146, 60, 0.13), 0 4px 10px rgba(194, 65, 12, 0.07)"
+                      : "inset 0 1px 0 rgba(255, 255, 255, 0.84)";
 
               return (
                 <div
@@ -2735,7 +2791,7 @@ function ClassReport({
                     gridTemplateColumns: GRID_COLS,
                     alignItems: "stretch",
                     borderBottom:
-                      i === students.length - 1 ? "none" : "1px solid rgba(203, 213, 225, 0.5)",
+                      i === students.length - 1 ? "none" : REPORT_GRID_BORDER,
                     background: absent
                       ? "rgba(241, 245, 249, 0.55)"
                       : i % 2 === 0
@@ -2750,35 +2806,37 @@ function ClassReport({
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
-                      padding: "4px 2px",
-                      borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                      padding: "4px 3px",
+                      borderRight: REPORT_GRID_BORDER,
+                      background:
+                        place === 1
+                          ? "linear-gradient(180deg, rgba(254, 249, 195, 0.4), rgba(255, 255, 255, 0))"
+                          : place === 2
+                            ? "linear-gradient(180deg, rgba(226, 232, 240, 0.42), rgba(255, 255, 255, 0))"
+                            : place === 3
+                              ? "linear-gradient(180deg, rgba(255, 237, 213, 0.42), rgba(255, 255, 255, 0))"
+                              : "linear-gradient(180deg, rgba(248, 250, 252, 0.34), rgba(255, 255, 255, 0))",
                     }}
                   >
-                    {showBadge ? (
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "29px",
-                          height: "29px",
-                          borderRadius: "50%",
-                          fontSize: "13px",
-                          fontWeight: 900,
-                          background: `linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 60%), ${rankBg}`,
-                          border: `1.5px solid ${rankBorder}`,
-                          color: rankFg,
-                          boxShadow:
-                            "inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 1px 3px rgba(0, 0, 0, 0.05)",
-                        }}
-                      >
-                        {seq}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: "14px", fontWeight: 800, color: "#94a3b8" }}>
-                        {seq}
-                      </span>
-                    )}
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: showBadge ? "30px" : "28px",
+                        height: showBadge ? "30px" : "26px",
+                        borderRadius: showBadge ? "9999px" : "9px",
+                        fontSize: showBadge ? "13px" : "12.5px",
+                        fontWeight: 900,
+                        background: rankBg,
+                        border: `${showBadge ? 1.2 : 0.5}px solid ${showBadge ? rankBorder : "rgba(148, 163, 184, 0.45)"}`,
+                        color: showBadge ? rankFg : absent ? "#94a3b8" : "#64748b",
+                        boxShadow: rankGlow,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {seq}
+                    </span>
                   </div>
 
                   {/* ── Name + ID ── */}
@@ -2789,7 +2847,7 @@ function ClassReport({
                       justifyContent: "center",
                       padding: "4px 12px",
                       gap: "2px",
-                      borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                      borderRight: REPORT_GRID_BORDER,
                     }}
                   >
                     <div
@@ -2857,7 +2915,7 @@ function ClassReport({
                                 justifyContent: "center",
                                 alignItems: "center",
                                 padding: "4px 6px",
-                                borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                                borderRight: REPORT_GRID_BORDER,
                               }}
                             >
                               <span
@@ -2880,7 +2938,7 @@ function ClassReport({
                                 justifyContent: "center",
                                 alignItems: "center",
                                 padding: "4px 6px",
-                                borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                                borderRight: REPORT_GRID_BORDER,
                               }}
                             >
                               <span
@@ -2904,7 +2962,7 @@ function ClassReport({
                                 justifyContent: "center",
                                 alignItems: "center",
                                 padding: "4px 6px",
-                                borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                                borderRight: REPORT_GRID_BORDER,
                               }}
                             >
                               <span
@@ -3014,7 +3072,7 @@ function ClassReport({
               }}
             >
               {is911
-                ? "Natija uchun bal = Natija / 10 • Jami = Natija uchun bal + Intizom"
+                ? "Jami = Natija uchun bal (Natija / 10) + Intizom ballari"
                 : "JAMI ball = (Ingliz + Matematika) / 2 + 3-fan + Intizom"}
             </div>
           </div>
