@@ -73,4 +73,5 @@ export interface RatingWorkbook {
   fileName: string;
   date: string;
   students: NormalizedStudent[];
+  week?: string;
 }

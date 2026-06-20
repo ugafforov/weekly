@@ -68,7 +68,7 @@ function colorKind(cell: Cell): StudentStatus | undefined {
   const b = parseInt(hex.slice(4, 6), 16);
   if (r > 240 && g > 240 && b > 240) return undefined; // white / no mark
   // Yellow / orange family → wrong ID.
-  if (r > 0xc0 && g > 0x80 && b < 0xa0 && r - b > 0x40) return "wrong-id";
+  if (r > 0xb0 && g > 0x60 && b < 0xb0 && r - b > 0x30) return "wrong-id";
   // Grey family → did not attend.
   if (Math.abs(r - g) < 0x18 && Math.abs(g - b) < 0x18 && r >= 0x60 && r <= 0xe0) return "absent";
   return undefined;
@@ -249,6 +249,12 @@ function buildLayout(sheet: XLSX.WorkSheet): SheetLayout | null {
   return { kind, nameCol, classCol, totalCol, subjects, avgCol, discCols, idCols, visibleCols };
 }
 
+/* ─── Helper to identify explicit wrong ID text markers ─────────── */
+const isWrongIdText = (val: string): boolean => {
+  const v = val.trim().toLowerCase();
+  return v === "id" || v === "#" || v === "id xato" || v === "id xato kiritilgan" || v === "xato id";
+};
+
 /* ─── Build one normalized student row ─────────────────────────── */
 function buildStudent(
   sheet: XLSX.WorkSheet,
@@ -272,13 +278,44 @@ function buildStudent(
   const allIds = layout.idCols.map((c) => fmt(cellAt(sheet, row, c)));
   const studentId = modeOf(allIds);
 
+  // Check if student has at least one subject with valid answers (non-blank correct count, or non-blank and non-zero percentage/points)
+  const hasAnyActiveSubject = layout.subjects.some((def) => {
+    const correct = def.correctCol !== undefined ? rawNum(cellAt(sheet, row, def.correctCol)) : null;
+    const resultCell = cellAt(sheet, row, def.resultCol);
+
+    const subjectCols = [
+      def.idCol,
+      def.resultCol,
+      def.correctCol,
+      def.balCol,
+      def.levelCol,
+      def.faniCol,
+    ];
+    const hasWrongIdMarker = subjectCols.some((c) => {
+      if (c === undefined) return false;
+      const cell = cellAt(sheet, row, c);
+      if (colorKind(cell) === "wrong-id") return true;
+      const cellVal = fmt(cell);
+      return isWrongIdText(cellVal);
+    });
+
+    if (hasWrongIdMarker) return true;
+
+    if (layout.kind === "5-8") {
+      const percent = percentFrom(resultCell);
+      return correct !== null || (percent !== null && percent > 0);
+    } else {
+      const points = rawNum(resultCell);
+      return correct !== null || (points !== null && points > 0);
+    }
+  });
+
   const subjects: SubjectResult[] = layout.subjects.map((def) => {
     const resultCell = cellAt(sheet, row, def.resultCol);
     const correct =
       def.correctCol !== undefined ? rawNum(cellAt(sheet, row, def.correctCol)) : null;
     const id = def.idCol !== undefined ? fmt(cellAt(sheet, row, def.idCol)) : "";
-    // ID error is flagged two ways: a manual colour marker on any of the subject's
-    // cells (the teacher highlights it before upload), or a detectable ID mismatch.
+    // ID error is flagged two ways: a manual colour marker, wrong ID text keywords, or a detectable ID mismatch.
     const subjectCols = [
       def.idCol,
       def.resultCol,
@@ -290,13 +327,20 @@ function buildStudent(
     const colorMark = subjectCols.some(
       (c) => c !== undefined && colorKind(cellAt(sheet, row, c)) === "wrong-id",
     );
-    const idError = colorMark || Boolean(id && studentId && id !== studentId);
+    const textMark = subjectCols.some((c) => {
+      if (c === undefined) return false;
+      const cellVal = fmt(cellAt(sheet, row, c));
+      return isWrongIdText(cellVal);
+    });
+    const idError = colorMark || textMark || Boolean(id && studentId && id !== studentId);
 
     // The 3rd subject always has 10 questions; the first two have 15.
     const totalQ = def.isThird ? 10 : 15;
 
     if (layout.kind === "5-8") {
       const percent = percentFrom(resultCell);
+      const scoreStr = def.balCol !== undefined ? fmt(cellAt(sheet, row, def.balCol)) : "";
+      const isWrongIdSignature = hasAnyActiveSubject && correct === null && (percent === 0 || scoreStr === "0");
       const present = !(correct === null && (percent === null || percent === 0));
       const ratio = correct !== null ? correct / totalQ : percent !== null ? percent / 100 : null;
       return {
@@ -312,7 +356,7 @@ function buildStudent(
         score: def.balCol !== undefined ? fmt(cellAt(sheet, row, def.balCol)) : "",
         level: def.levelCol !== undefined ? fmt(cellAt(sheet, row, def.levelCol)) : undefined,
         id,
-        idError,
+        idError: idError || isWrongIdSignature,
         tone: present ? toneFromRatio(ratio) : "none",
         present,
       } satisfies SubjectResult;
@@ -321,6 +365,7 @@ function buildStudent(
     // 9-11 — point based. The per-subject bal is the raw result divided by 10.
     const points = rawNum(resultCell);
     const subjectName = def.faniCol !== undefined ? fmt(cellAt(sheet, row, def.faniCol)) : "";
+    const isWrongIdSignature = hasAnyActiveSubject && correct === null && points === 0;
     const present = !(correct === null && (points === null || points === 0));
     const ratio = correct !== null ? correct / totalQ : null;
     return {
@@ -332,7 +377,7 @@ function buildStudent(
       totalQuestions: totalQ,
       score: points !== null ? String(Math.round((points / 10) * 100) / 100) : "",
       id,
-      idError,
+      idError: idError || isWrongIdSignature,
       tone: present ? toneFromRatio(ratio) : "none",
       present,
     } satisfies SubjectResult;
@@ -408,6 +453,7 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
 
   const students: NormalizedStudent[] = [];
   let date = "";
+  let week = "";
 
   for (const sheetName of book.SheetNames) {
     if (/template|shablon/i.test(sheetName)) continue;
@@ -441,6 +487,31 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
         }
       }
     }
+
+    // Week extraction logic
+    if (!week) {
+      const mSheet = sheetName.match(/(\d+)[- ]?hafta/i);
+      if (mSheet) {
+        week = `${mSheet[1]}-hafta`;
+      } else {
+        for (let row = range.s.r; row <= headerRow && !week; row += 1) {
+          for (const c of layout.visibleCols) {
+            const m = text(mergedValue(sheet, row, c)).match(/(\d+)[- ]?hafta/i);
+            if (m?.[1]) {
+              week = `${m[1]}-hafta`;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!week) {
+    const mFile = file.name.match(/(\d+)[- ]?hafta/i);
+    if (mFile) {
+      week = `${mFile[1]}-hafta`;
+    }
   }
 
   if (!students.length) {
@@ -451,6 +522,7 @@ export async function parseRatingWorkbook(file: File): Promise<RatingWorkbook> {
     fileName: file.name,
     date: date || new Date().toLocaleDateString("uz-UZ"),
     students,
+    week,
   };
 }
 

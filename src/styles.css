@@ -64,8 +64,8 @@
 }
 
 :root {
-  --font-heading: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: Georgia, 'Times New Roman', serif;
+  --font-body: Georgia, 'Times New Roman', serif;
   --radius: 1rem;
   --background: oklch(0.966 0.006 210);
   --foreground: oklch(0.205 0.018 196);

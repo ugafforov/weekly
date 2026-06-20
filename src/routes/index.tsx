@@ -23,6 +23,7 @@ import {
   Globe,
   BookOpen,
   GraduationCap,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -181,7 +182,7 @@ function makeDemoWorkbook(): RatingWorkbook {
     correct,
     totalQuestions: /3-fan/i.test(label) ? 10 : 15,
     score,
-    level: present ? level : undefined,
+    level,
     tone: !present
       ? "none"
       : percent >= 60
@@ -380,7 +381,7 @@ function makeDemoWorkbook(): RatingWorkbook {
       "absent",
     ),
   ];
-  return { fileName: "5A-13.06.2026.xlsx", date: "13.06.2026", students };
+  return { fileName: "5A-13.06.2026.xlsx", date: "13.06.2026", students, week: "6-hafta" };
 }
 
 /* ─── Main Dashboard ───────────────────────────────────────────── */
@@ -898,6 +899,7 @@ function RatingDashboard() {
                 activeClass={activeClass}
                 students={students}
                 thirdSubject={thirdSubject}
+                week={workbook.week}
               />
             </div>
           )}
@@ -1533,8 +1535,17 @@ function Leaderboard({ students }: { students: NormalizedStudent[] }) {
             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
               {s.name}
               {s.studentId ? (
-                <span className="ml-1.5 text-[11px] font-normal text-dash-muted">
-                  #{s.studentId}
+                <span
+                  className="ml-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold"
+                  style={{
+                    color: "#0f766e",
+                    background: "rgba(13, 148, 136, 0.08)",
+                    border: "1px solid rgba(13, 148, 136, 0.18)",
+                    boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
+                  }}
+                >
+                  <Key size={10} className="shrink-0 opacity-90" />
+                  {s.studentId}
                 </span>
               ) : null}
             </span>
@@ -1587,26 +1598,26 @@ const cellCenter: React.CSSProperties = {
 /* ─── Helper for color-coded visualization based on percentage ─── */
 function getPercentColor(percent: number | null): { bg: string; text: string; border: string } {
   if (percent === null) {
-    return { bg: "rgba(241, 245, 249, 0.5)", text: "#94a3b8", border: "rgba(203, 213, 225, 0.5)" };
+    return { bg: "rgba(241, 245, 249, 0.3)", text: "#94a3b8", border: "rgba(203, 213, 225, 0.3)" };
   }
   if (percent >= 70) {
     return { 
-      bg: "rgba(34, 197, 94, 0.1)", 
+      bg: "rgba(34, 197, 94, 0.05)", 
       text: "#166534", 
-      border: "rgba(34, 197, 94, 0.3)" 
+      border: "rgba(34, 197, 94, 0.15)" 
     };
   }
   if (percent >= 50) {
     return { 
-      bg: "rgba(234, 179, 8, 0.1)", 
+      bg: "rgba(234, 179, 8, 0.05)", 
       text: "#854d0e", 
-      border: "rgba(234, 179, 8, 0.3)" 
+      border: "rgba(234, 179, 8, 0.15)" 
     };
   }
   return { 
-    bg: "rgba(239, 68, 68, 0.1)", 
+    bg: "rgba(239, 68, 68, 0.05)", 
     text: "#991b1b", 
-    border: "rgba(239, 68, 68, 0.3)" 
+    border: "rgba(239, 68, 68, 0.15)" 
   };
 }
 
@@ -1645,13 +1656,21 @@ function SubjectCell({
   const colorInfo = getPercentColor(percent);
 
   if (subject.idError) {
+    const showFanCol = is911 && !isThird;
+    const showLevelCol = !is911 && !isThird;
+
+    const gridColsSubject = showFanCol
+      ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+      : showLevelCol
+        ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+        : "minmax(0, 1fr) minmax(0, 1fr)";
+
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
+          display: "grid",
+          gridTemplateColumns: gridColsSubject,
+          alignItems: "stretch",
           background:
             "linear-gradient(180deg, rgba(254, 245, 207, 0.9) 0%, rgba(253, 234, 170, 0.62) 100%)",
           borderRight: "1px solid rgba(203, 213, 225, 0.45)",
@@ -1660,34 +1679,88 @@ function SubjectCell({
           boxSizing: "border-box",
         }}
       >
-        <span
+        {showLevelCol && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+              padding: "0 4px",
+            }}
+          >
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#b45309" }}>
+              {subject.level || "—"}
+            </div>
+          </div>
+        )}
+        {showFanCol && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "center",
+              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+              fontSize: "7.5px",
+              fontWeight: 800,
+              color: "#b45309",
+              padding: "0 6px",
+              textAlign: "left",
+              lineHeight: 1.1,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {subject.subjectName ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1).toLowerCase() : "—"}
+          </div>
+        )}
+
+        <div
           style={{
-            fontSize: "9.5px",
-            fontWeight: 700,
-            color: "#b45309",
-            background: "rgba(255, 251, 235, 0.85)",
-            border: "1px solid #fde68a",
-            borderRadius: "5px",
-            padding: "4px 8px",
-            display: "inline-flex",
+            gridColumn: `span ${showLevelCol ? 3 : 2}`,
+            display: "flex",
+            justifyContent: "center",
             alignItems: "center",
-            gap: "3px",
+            boxSizing: "border-box",
           }}
         >
-          ⚠ ID xato kiritilgan
-        </span>
+          <span
+            style={{
+              fontSize: "9px",
+              fontWeight: 700,
+              color: "#b45309",
+              background: "rgba(255, 251, 235, 0.85)",
+              border: "1px solid #fde68a",
+              borderRadius: "4px",
+              padding: "2px 6px",
+              letterSpacing: "0.01em",
+              textTransform: "uppercase",
+            }}
+          >
+            id xato kiritilgan
+          </span>
+        </div>
       </div>
     );
   }
 
   if (!subject.present) {
+    const showFanCol = is911 && !isThird;
+    const showLevelCol = !is911 && !isThird;
+
+    const gridColsSubject = showFanCol
+      ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+      : showLevelCol
+        ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+        : "minmax(0, 1fr) minmax(0, 1fr)";
+
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
+          display: "grid",
+          gridTemplateColumns: gridColsSubject,
+          alignItems: "stretch",
           background:
             "linear-gradient(180deg, rgba(248, 250, 252, 0.85) 0%, rgba(238, 242, 247, 0.55) 100%)",
           borderRight: "1px solid rgba(203, 213, 225, 0.45)",
@@ -1695,22 +1768,68 @@ function SubjectCell({
           boxSizing: "border-box",
         }}
       >
-        <span style={{ fontSize: "14px", fontWeight: 700, color: "#94a3b8" }}>—</span>
-        <span
+        {showLevelCol && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+              padding: "0 4px",
+            }}
+          >
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#64748b" }}>
+              {subject.level || "—"}
+            </div>
+          </div>
+        )}
+        {showFanCol && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "center",
+              borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+              fontSize: "7.5px",
+              fontWeight: 800,
+              color: "#64748b",
+              padding: "0 6px",
+              textAlign: "left",
+              lineHeight: 1.1,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {subject.subjectName ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1).toLowerCase() : "—"}
+          </div>
+        )}
+
+        <div
           style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            color: "#ef4444",
-            background: "rgba(254, 242, 242, 0.85)",
-            border: "1px solid #fee2e2",
-            borderRadius: "4px",
-            padding: "1px 5px",
-            marginTop: "1.5px",
-            letterSpacing: "0.01em",
+            gridColumn: `span ${showLevelCol ? 3 : 2}`,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            boxSizing: "border-box",
           }}
         >
-          kelmagan
-        </span>
+          <span
+            style={{
+              fontSize: "9px",
+              fontWeight: 700,
+              color: "#64748b",
+              background: "rgba(241, 245, 249, 0.85)",
+              border: "1px solid #cbd5e1",
+              borderRadius: "4px",
+              padding: "2px 6px",
+              letterSpacing: "0.01em",
+              textTransform: "uppercase",
+            }}
+          >
+            kelmagan
+          </span>
+        </div>
       </div>
     );
   }
@@ -1723,14 +1842,16 @@ function SubjectCell({
 
   const balText = is911 ? subject.resultText : subject.score;
 
-  const showFanCol = is911;
+  const showFanCol = is911 && !isThird;
   const showLevelCol = !is911 && !isThird;
 
   const gridColsSubject = showFanCol
-    ? "1fr 1fr 1fr 1fr"
-    : showLevelCol
-      ? "1fr 1fr 1fr 1fr"
-      : "1fr 1fr 1fr";
+    ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+    : is911 && isThird
+      ? "minmax(0, 1fr) minmax(0, 1fr)"
+      : showLevelCol
+        ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+        : "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)";
 
   return (
     <div
@@ -1764,19 +1885,23 @@ function SubjectCell({
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
+            justifyContent: "flex-start",
             alignItems: "center",
             borderRight: "1px solid rgba(203, 213, 225, 0.35)",
-            fontSize: "10.5px",
-            fontWeight: 700,
+            fontSize: "7.5px",
+            fontWeight: 800,
             color: "#475569",
-            textTransform: "uppercase",
             padding: "0 6px",
-            textAlign: "center",
+            textAlign: "left",
             lineHeight: 1.1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            letterSpacing: "-0.02em",
           }}
+          title={subject.subjectName || ""}
         >
-          {subject.subjectName || "—"}
+          {subject.subjectName ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1).toLowerCase() : "—"}
         </div>
       )}
 
@@ -1796,21 +1921,23 @@ function SubjectCell({
       </div>
 
       {/* 3) Foizi - with color coding */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          borderRight: "1px solid rgba(203, 213, 225, 0.35)",
-          fontSize: "13px",
-          fontWeight: 700,
-          color: colorInfo.text,
-          background: colorInfo.bg,
-          padding: "0 4px",
-        }}
-      >
-        {subject.correct !== null ? percentText : "—"}
-      </div>
+      {!is911 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            borderRight: "1px solid rgba(203, 213, 225, 0.35)",
+            fontSize: "13px",
+            fontWeight: 700,
+            color: colorInfo.text,
+            background: colorInfo.bg,
+            padding: "0 4px",
+          }}
+        >
+          {subject.correct !== null ? percentText : "—"}
+        </div>
+      )}
 
       {/* 4) Bali */}
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
@@ -1835,22 +1962,22 @@ interface DiscColorInfo {
 function getDiscColor(value: string, empty: boolean): DiscColorInfo {
   if (empty) {
     return {
-      bg: "rgba(241, 245, 249, 0.5)",
-      border: "rgba(203, 213, 225, 0.5)",
-      fg: "rgba(148, 163, 184, 0.8)",
+      bg: "transparent",
+      border: "rgba(203, 213, 225, 0.35)",
+      fg: "#94a3b8",
       isDashed: true,
     };
   }
   const val = Number(value);
   if (Number.isNaN(val)) {
-    return { bg: "rgba(241, 245, 249, 0.6)", border: "rgba(226, 232, 240, 0.7)", fg: "#475569" };
+    return { bg: "transparent", border: "rgba(203, 213, 225, 0.35)", fg: "#475569" };
   }
-  if (val >= 1) {
-    return { bg: "rgba(209, 250, 229, 0.85)", border: "rgba(167, 243, 208, 0.85)", fg: "#065f46" };
-  } else if (val > 0 && val < 1) {
-    return { bg: "rgba(254, 243, 199, 0.85)", border: "rgba(253, 230, 138, 0.85)", fg: "#92400e" };
+  if (val > 0) {
+    return { bg: "rgba(34, 197, 94, 0.05)", border: "rgba(203, 213, 225, 0.35)", fg: "#166534" };
+  } else if (val === 0) {
+    return { bg: "rgba(234, 179, 8, 0.05)", border: "rgba(203, 213, 225, 0.35)", fg: "#854d0e" };
   } else {
-    return { bg: "rgba(254, 226, 226, 0.85)", border: "rgba(254, 202, 202, 0.85)", fg: "#991b1b" };
+    return { bg: "rgba(239, 68, 68, 0.05)", border: "rgba(203, 213, 225, 0.35)", fg: "#991b1b" };
   }
 }
 
@@ -1900,12 +2027,14 @@ function ClassReport({
   activeClass,
   students,
   thirdSubject,
+  week,
 }: {
   ref: Ref<HTMLDivElement>;
   date: string;
   activeClass: string;
   students: NormalizedStudent[];
   thirdSubject: string;
+  week?: string;
 }) {
   const activeTotals = useMemo(() => {
     return students.filter((s) => s.status !== "absent" && s.total > 0).map((s) => s.total);
@@ -1934,6 +2063,55 @@ function ClassReport({
     return percent >= 0.66 ? "high" : percent >= 0.33 ? "mid" : "low";
   };
 
+  const getJamiBg = (total: number): string => {
+    if (maxTotal === minTotal) {
+      return "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)";
+    }
+    const percent = Math.min(Math.max((total - minTotal) / (maxTotal - minTotal), 0), 1);
+    
+    let r1, g1, b1;
+    let r2, g2, b2;
+    
+    if (percent < 0.5) {
+      const p = percent * 2;
+      r1 = Math.round(254 + (254 - 254) * p); // #fee2e2 -> #fef3c7
+      g1 = Math.round(226 + (243 - 226) * p);
+      b1 = Math.round(226 + (199 - 226) * p);
+      
+      r2 = Math.round(254 + (253 - 254) * p); // #fecaca -> #fde68a
+      g2 = Math.round(205 + (230 - 205) * p);
+      b2 = Math.round(205 + (138 - 205) * p);
+    } else {
+      const p = (percent - 0.5) * 2;
+      r1 = Math.round(254 + (209 - 254) * p); // #fef3c7 -> #d1fae5
+      g1 = Math.round(243 + (250 - 243) * p);
+      b1 = Math.round(199 + (229 - 199) * p);
+      
+      r2 = Math.round(253 + (167 - 253) * p); // #fde68a -> #a7f3d0
+      g2 = Math.round(230 + (243 - 230) * p);
+      b2 = Math.round(138 + (208 - 138) * p);
+    }
+    
+    return `linear-gradient(135deg, rgb(${r1}, ${g1}, ${b1}) 0%, rgb(${r2}, ${g2}, ${b2}) 100%)`;
+  };
+
+  const getJamiFg = (total: number): string => {
+    const percent = Math.min(Math.max((total - minTotal) / (maxTotal - minTotal), 0), 1);
+    let r, g, b;
+    if (percent < 0.5) {
+      const p = percent * 2;
+      r = Math.round(153 + (146 - 153) * p); // #991b1b -> #92400e
+      g = Math.round(27 + (64 - 27) * p);
+      b = Math.round(27 + (14 - 27) * p);
+    } else {
+      const p = (percent - 0.5) * 2;
+      r = Math.round(146 + (6 - 146) * p); // #92400e -> #065f46
+      g = Math.round(64 + (95 - 64) * p);
+      b = Math.round(14 + (70 - 14) * p);
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
   const kind = students[0]?.kind ?? "5-8";
   const is911 = kind === "9-11";
   const midLabel = students[0]?.midLabel ?? "O'RTACHA BAL";
@@ -1956,9 +2134,8 @@ function ClassReport({
     if (i === midAfter - 1) headerMains.push(midLabel);
   });
 
-  /* Column widths: №  Name  Sub1  Sub2  Mid  Sub3/3-fan  INTIZOM  JAMI */
   const GRID_COLS = is911
-    ? "46px 390px 180px 180px 180px 88px 130px 84px"
+    ? "46px 386px 190px 190px 150px 88px 130px 98px"
     : "46px 386px 190px 190px 88px 150px 130px 98px";
 
   /* ── Inline style constants ── */
@@ -1966,6 +2143,7 @@ function ClassReport({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    fontFamily: "Georgia, 'Times New Roman', serif",
     fontSize: "13.5px",
     fontWeight: 900,
     color: "#ffffff",
@@ -1980,8 +2158,7 @@ function ClassReport({
     <div
       ref={ref}
       style={{
-        fontFamily:
-          "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        fontFamily: "Georgia, 'Times New Roman', serif",
         background: "linear-gradient(160deg, #eef2f7 0%, #e4ecf4 100%)",
         padding: "24px 30px",
         width: "1338px",
@@ -2048,13 +2225,17 @@ function ClassReport({
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "row",
+            justifyContent: "space-between",
             alignItems: "center",
-            padding: "36px 40px 24px",
+            padding: "24px 40px 20px",
             background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
             borderBottom: "1px solid rgba(226, 232, 240, 0.8)",
             borderRadius: "22px 22px 0 0",
             position: "relative",
+            overflow: "hidden",
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
           {/* Top brand color line */}
@@ -2064,228 +2245,166 @@ function ClassReport({
             left: 0,
             right: 0,
             height: "5px",
-            background: "linear-gradient(90deg, #0e7269 0%, #14b8a6 50%, #f59e0b 100%)"
+            background: "linear-gradient(90deg, #0e7269 0%, #14b8a6 50%, #f59e0b 100%)",
+            zIndex: 2,
           }} />
 
-          {/* Centered Logo Badge */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "64px",
-            width: "64px",
-            borderRadius: "50%",
-            background: "#ffffff",
-            boxShadow: "0 8px 20px rgba(14, 114, 105, 0.08), 0 0 0 1px rgba(14, 114, 105, 0.08)",
-            marginBottom: "12px",
-            border: "1.5px solid #0e7269",
-          }}>
-            <img src={logo} alt="Al-Xorazmiy" style={{ height: "42px", width: "42px", objectFit: "contain" }} />
-          </div>
 
-          {/* Logo Serif Text (Image 1 style) */}
-          <h1 style={{
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            fontSize: "30px",
-            fontWeight: 800,
-            color: "#0f172a",
-            letterSpacing: "0.06em",
-            lineHeight: 1,
-            margin: 0,
-            textTransform: "uppercase"
-          }}>
-            AL-XORAZMIY
-          </h1>
-          
-          {/* Subtitle "— SCHOOL —" */}
+
+          {/* Left Column: Symmetrical Compact Logo */}
           <div style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            width: "100%",
-            justifyContent: "center",
-            gap: "12px",
-            marginTop: "4px",
-            marginBottom: "20px"
+            position: "relative",
+            zIndex: 1,
+            width: "160px",
           }}>
-            <div style={{ width: "32px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
             <span style={{
-              fontFamily: "var(--font-sans), sans-serif",
-              fontSize: "12px",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: "15px",
               fontWeight: 800,
-              color: "#0e7269",
-              letterSpacing: "0.45em",
-              textIndent: "0.45em",
-              textTransform: "uppercase"
+              color: "#0f172a",
+              letterSpacing: "0.04em",
+              lineHeight: 1.1,
             }}>
-              SCHOOL
+              AL-XORAZMIY
             </span>
-            <div style={{ width: "32px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              marginTop: "2px",
+            }}>
+              <div style={{ width: "8px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
+              <span style={{
+                fontFamily: "var(--font-sans), sans-serif",
+                fontSize: "8px",
+                fontWeight: 800,
+                color: "#0e7269",
+                letterSpacing: "0.15em",
+                textIndent: "0.15em",
+                textTransform: "uppercase"
+              }}>
+                SCHOOL
+              </span>
+              <div style={{ width: "8px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
+            </div>
           </div>
 
-          {/* Tagline / System Name */}
-          <div style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.18em",
-            color: "#64748b",
-            textTransform: "uppercase",
-            marginBottom: "6px"
-          }}>
-            HAFTALIK REYTING TIZIMI
-          </div>
-
-          {/* Main Title */}
-          <div style={{
-            fontSize: "26px",
-            fontWeight: 800,
-            color: "#0f172a",
-            letterSpacing: "-0.01em",
-            lineHeight: 1.2,
-            textAlign: "center",
-            marginBottom: "18px"
-          }}>
-            HAFTALIK JAMG'ARILGAN BALLAR
-          </div>
-
-          {/* Meta Details: Date and Class */}
+          {/* Center Column: Title and Badges */}
           <div style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: "20px",
+            gap: "10px",
+            position: "relative",
+            zIndex: 1,
+            flex: 1,
           }}>
-            {/* Date */}
+            {/* Main Title */}
             <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#475569",
-              background: "#f1f5f9",
-              padding: "6px 14px",
-              borderRadius: "30px",
-              border: "1px solid #e2e8f0"
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#0e7269" }}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-              {date}
-            </div>
-
-            {/* Class badge */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "14px",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: "21px",
               fontWeight: 800,
-              color: "#ffffff",
-              background: "linear-gradient(135deg, #0e7269 0%, #0d9488 100%)",
-              padding: "6px 16px",
-              borderRadius: "30px",
-              boxShadow: "0 4px 12px rgba(14, 114, 105, 0.15)"
+              color: "#0f172a",
+              letterSpacing: "0.01em",
+              lineHeight: 1.2,
+              textAlign: "center",
             }}>
-              <span>{activeClass}</span>
-              <span style={{ fontSize: "10px", fontWeight: 500, color: "rgba(255, 255, 255, 0.8)", letterSpacing: "0.05em" }}>SINF</span>
+              HAFTALIK JAMG&#x2019;ARILGAN BALLAR
+            </div>
+
+            {/* Meta Details: Date · Class — elegant typographic row */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              marginTop: "2px",
+            }}>
+              {/* Left decorative line */}
+              <div style={{ flex: 1, height: "1px", background: "linear-gradient(to right, transparent, rgba(14,114,105,0.35))" }} />
+
+              {/* Date */}
+              <span style={{
+                fontFamily: "Georgia, 'Times New Roman', serif",
+                fontSize: "11px",
+                fontWeight: 700,
+                color: "#475569",
+                letterSpacing: "0.08em",
+              }}>
+                {date}
+              </span>
+
+              {/* Dot separator */}
+              <div style={{
+                width: "4px",
+                height: "4px",
+                borderRadius: "50%",
+                background: "#0e7269",
+                opacity: 0.7,
+              }} />
+
+              {/* Class */}
+              <span style={{
+                fontFamily: "Georgia, 'Times New Roman', serif",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#0e7269",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+              }}>
+                {activeClass} SINF
+              </span>
+
+              {/* Right decorative line */}
+              <div style={{ flex: 1, height: "1px", background: "linear-gradient(to left, transparent, rgba(14,114,105,0.35))" }} />
+            </div>
+          </div>
+
+          {/* Right Column: Symmetrical Compact Logo */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            position: "relative",
+            zIndex: 1,
+            width: "160px",
+          }}>
+            <span style={{
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: "15px",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "0.04em",
+              lineHeight: 1.1,
+            }}>
+              AL-XORAZMIY
+            </span>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              marginTop: "2px",
+            }}>
+              <div style={{ width: "8px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
+              <span style={{
+                fontFamily: "var(--font-sans), sans-serif",
+                fontSize: "8px",
+                fontWeight: 800,
+                color: "#0e7269",
+                letterSpacing: "0.15em",
+                textIndent: "0.15em",
+                textTransform: "uppercase"
+              }}>
+                SCHOOL
+              </span>
+              <div style={{ width: "8px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
             </div>
           </div>
         </div>
 
-        {/* ── Legend ── */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "24px",
-            flexWrap: "wrap",
-            padding: "14px 28px",
-            borderBottom: "1px solid #e2e8f0",
-            fontSize: "12px",
-            color: "#475569",
-            fontWeight: 600,
-            background: "#f8fafc",
-            alignItems: "center"
-          }}
-        >
-          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "4px",
-                  background: "rgba(34, 197, 94, 0.15)",
-                  border: "1.5px solid rgba(34, 197, 94, 0.4)",
-                  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
-                }}
-              />
-              <span style={{ color: "#166534" }}>70%+ yaxshi</span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "4px",
-                  background: "rgba(234, 179, 8, 0.15)",
-                  border: "1.5px solid rgba(234, 179, 8, 0.4)",
-                  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
-                }}
-              />
-              <span style={{ color: "#854d0e" }}>50-69% o'rtacha</span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                style={{
-                  width: "14px",
-                  height: "14px",
-                  borderRadius: "4px",
-                  background: "rgba(239, 68, 68, 0.12)",
-                  border: "1.5px solid rgba(239, 68, 68, 0.4)",
-                  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
-                }}
-              />
-              <span style={{ color: "#991b1b" }}>50% dan past</span>
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span
-                style={{
-                  width: "40px",
-                  height: "20px",
-                  borderRadius: "4px",
-                  background: "rgba(254, 243, 199, 0.6)",
-                  border: "1.5px solid #fde68a",
-                  display: "inline-block",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-                }}
-              />
-              <span style={{ color: "#78350f" }}>
-                ID raqami <strong style={{ color: "#dc2626", fontWeight: 800 }}>xato</strong> kiritilgan
-              </span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span
-                style={{
-                  width: "40px",
-                  height: "20px",
-                  borderRadius: "4px",
-                  background: "rgba(241, 245, 249, 0.6)",
-                  border: "1.5px solid #cbd5e1",
-                  display: "inline-block",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-                }}
-              />
-              <span style={{ color: "#475569" }}>
-                Imtihonda <strong style={{ color: "#475569", fontWeight: 800 }}>qatnashmagan</strong>
-              </span>
-            </span>
-          </div>
-        </div>
+
 
         {/* ── Table area ── */}
         <div style={{ padding: "0 0 16px" }}>
@@ -2311,14 +2430,16 @@ function ClassReport({
               const subj = isMid ? null : students[0]?.subjects[subIdx];
               const totalQ =
                 subj?.totalQuestions ?? (is911 ? (subIdx === 2 ? 10 : 15) : subIdx === 2 ? 10 : 15);
-              const showFanCol = is911 && !isMid;
+              const showFanCol = is911 && !isMid && subIdx !== 2;
               const showLevelCol = !is911 && !isMid && subIdx !== 2;
 
               const gridColsSubject = showFanCol
-                ? "1fr 1fr 1fr 1fr"
-                : showLevelCol
-                  ? "1fr 1fr 1fr 1fr"
-                  : "1fr 1fr 1fr";
+                ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+                : is911 && subIdx === 2
+                  ? "minmax(0, 1fr) minmax(0, 1fr)"
+                  : showLevelCol
+                    ? "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)"
+                    : "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)";
 
               return (
                 <div
@@ -2329,13 +2450,22 @@ function ClassReport({
                     <div
                       style={{
                         display: "flex",
+                        flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
                         width: "100%",
                         height: "100%",
+                        padding: "8px 4px",
+                        boxSizing: "border-box",
+                        fontSize: "12px",
+                        fontWeight: 900,
+                        letterSpacing: "0.02em",
+                        lineHeight: "1.2",
                       }}
                     >
-                      <span>{l}</span>
+                      {l.split(" ").map((word, wIdx) => (
+                        <span key={wIdx}>{word}</span>
+                      ))}
                     </div>
                   ) : (
                     <>
@@ -2351,7 +2481,7 @@ function ClassReport({
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <span style={{ fontSize: "11px", letterSpacing: "0.02em" }}>{l}</span>
+                          <span style={{ fontSize: "12.5px", letterSpacing: "0.02em", fontWeight: 900 }}>{l}</span>
                         </div>
                         <span
                           style={{
@@ -2378,9 +2508,9 @@ function ClassReport({
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "9.5px",
-                              fontWeight: 800,
-                              color: "rgba(255,255,255,0.8)",
+                              fontSize: "8px",
+                              fontWeight: 900,
+                              color: "rgba(255,255,255,0.9)",
                               borderRight: "1px solid rgba(255,255,255,0.12)",
                               padding: "5px 0",
                             }}
@@ -2394,9 +2524,9 @@ function ClassReport({
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "9.5px",
-                              fontWeight: 800,
-                              color: "rgba(255,255,255,0.8)",
+                              fontSize: "8px",
+                              fontWeight: 900,
+                              color: "rgba(255,255,255,0.9)",
                               borderRight: "1px solid rgba(255,255,255,0.12)",
                               padding: "5px 0",
                             }}
@@ -2410,36 +2540,38 @@ function ClassReport({
                             alignItems: "center",
                             justifyContent: "center",
                             borderRight: "1px solid rgba(255,255,255,0.12)",
-                            fontSize: "9.5px",
-                            fontWeight: 800,
-                            color: "rgba(255,255,255,0.8)",
+                            fontSize: "8px",
+                            fontWeight: 900,
+                            color: "rgba(255,255,255,0.9)",
                             padding: "5px 0",
                           }}
                         >
                           TO'G'RI
                         </div>
+                        {!is911 && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRight: "1px solid rgba(255,255,255,0.12)",
+                              fontSize: "8px",
+                              fontWeight: 900,
+                              color: "rgba(255,255,255,0.9)",
+                              padding: "5px 0",
+                            }}
+                          >
+                            FOIZI
+                          </div>
+                        )}
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            borderRight: "1px solid rgba(255,255,255,0.12)",
-                            fontSize: "9.5px",
-                            fontWeight: 800,
-                            color: "rgba(255,255,255,0.8)",
-                            padding: "5px 0",
-                          }}
-                        >
-                          FOIZI
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "9.5px",
-                            fontWeight: 800,
-                            color: "rgba(255,255,255,0.8)",
+                            fontSize: "8px",
+                            fontWeight: 900,
+                            color: "rgba(255,255,255,0.9)",
                             padding: "5px 0",
                           }}
                         >
@@ -2472,7 +2604,7 @@ function ClassReport({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ fontSize: "11px", letterSpacing: "0.02em" }}>INTIZOM</span>
+                  <span style={{ fontSize: "12.5px", letterSpacing: "0.02em", fontWeight: 900 }}>INTIZOM</span>
                 </div>
                 <span
                   style={{
@@ -2500,9 +2632,9 @@ function ClassReport({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "9.5px",
-                      fontWeight: 800,
-                      color: "rgba(255,255,255,0.8)",
+                      fontSize: "8px",
+                      fontWeight: 900,
+                      color: "rgba(255,255,255,0.9)",
                       borderRight: lIdx === 3 ? "none" : "1px solid rgba(255, 255, 255, 0.12)",
                       padding: "5px 0",
                     }}
@@ -2512,7 +2644,34 @@ function ClassReport({
                 ))}
               </div>
             </div>
-            <div style={{ ...hdrCell, borderRight: "none", padding: "8px 6px" }}>JAMI</div>
+            <div
+              style={{
+                ...hdrCell,
+                borderRight: "none",
+                padding: "8px 6px",
+                flexDirection: "column",
+                gap: "2px",
+                fontSize: "12px",
+                fontWeight: 900,
+                letterSpacing: "0.02em",
+                justifyContent: "center",
+              }}
+            >
+              <span>JAMI</span>
+              {week && (
+                <span
+                  style={{
+                    fontSize: "9px",
+                    color: "rgba(255,255,255,0.7)",
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    textTransform: "lowercase",
+                  }}
+                >
+                  {week}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Table body — unified table rows */}
@@ -2640,18 +2799,22 @@ function ClassReport({
                       {s.studentId && (
                         <span
                           style={{
-                            fontSize: "9px",
+                            fontSize: "10px",
                             fontWeight: 700,
-                            color: "rgba(100, 116, 139, 0.85)",
-                            background: "rgba(255, 255, 255, 0.5)",
-                            border: "1px solid rgba(203, 213, 225, 0.6)",
-                            borderRadius: "5px",
-                            padding: "1.5px 6px",
+                            color: "#0f766e",
+                            background: "rgba(13, 148, 136, 0.08)",
+                            border: "1px solid rgba(13, 148, 136, 0.18)",
+                            borderRadius: "6px",
+                            padding: "2px 6px",
                             whiteSpace: "nowrap",
-                            boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.7)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
                           }}
                         >
-                          ID {s.studentId}
+                          <Key size={11} style={{ opacity: 0.9 }} />
+                          {s.studentId}
                         </span>
                       )}
                     </div>
@@ -2708,7 +2871,7 @@ function ClassReport({
                       alignItems: "center",
                       justifyContent: "center",
                       textAlign: "center",
-                      background: `linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 45%), ${tc.bg}`,
+                      background: `linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 45%), ${getJamiBg(s.total)}`,
                       boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.28)",
                       height: "100%",
                       width: "100%",
@@ -2721,8 +2884,7 @@ function ClassReport({
                         display: "block",
                         fontSize: "14px",
                         fontWeight: 900,
-                        color: "#ffffff",
-                        textShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
+                        color: getJamiFg(s.total),
                         textAlign: "center",
                       }}
                     >
@@ -2735,164 +2897,43 @@ function ClassReport({
           </div>
         </div>
 
-        {/* ── Footer ── */}
+        {/* ── Footer with Legend Bar and Metadata ── */}
         <div
           style={{
-            padding: "16px 28px 16px",
-            borderTop: "1px solid rgba(226, 232, 240, 0.7)",
-            background: "rgba(251, 253, 254, 0.6)",
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "12px 30px",
+            borderTop: "1px solid rgba(226, 232, 240, 0.8)",
+            background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
             borderRadius: "0 0 22px 22px",
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              fontSize: "10px",
-              color: "#475569",
-              fontWeight: 600,
-            }}
-          >
-            {/* Left side: Intizom legend mapping */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-                flexWrap: "nowrap",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: 800,
-                  color: "#1e293b",
-                  fontSize: "11px",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                INTIZOM:
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    background: "rgba(14, 114, 105, 0.08)",
-                    border: "1px solid rgba(14, 114, 105, 0.25)",
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    color: "#0e7269",
-                  }}
-                >
-                  D
-                </span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#475569",
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Davomat
-                </span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    background: "rgba(14, 114, 105, 0.08)",
-                    border: "1px solid rgba(14, 114, 105, 0.25)",
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    color: "#0e7269",
-                  }}
-                >
-                  K
-                </span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#475569",
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Kech qolmaslik
-                </span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    background: "rgba(14, 114, 105, 0.08)",
-                    border: "1px solid rgba(14, 114, 105, 0.25)",
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    color: "#0e7269",
-                  }}
-                >
-                  V
-                </span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#475569",
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Uyga vazifa
-                </span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    background: "rgba(14, 114, 105, 0.08)",
-                    border: "1px solid rgba(14, 114, 105, 0.25)",
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    color: "#0e7269",
-                  }}
-                >
-                  O
-                </span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#475569",
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Odob-axloq
-                </span>
-              </span>
-            </div>
+          {/* Left Column: Legend Bar (Inline and Compact) */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 800, color: "#1e293b", fontSize: "11px", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+              INTIZOM:
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#475569", fontWeight: 600 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "18px", height: "18px", borderRadius: "50%", background: "rgba(14, 114, 105, 0.08)", border: "1px solid rgba(14, 114, 105, 0.25)", fontSize: "10px", fontWeight: 800, color: "#0e7269" }}>D</span> Davomat
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#475569", fontWeight: 600 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "18px", height: "18px", borderRadius: "50%", background: "rgba(14, 114, 105, 0.08)", border: "1px solid rgba(14, 114, 105, 0.25)", fontSize: "10px", fontWeight: 800, color: "#0e7269" }}>K</span> Kech qolmaslik
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#475569", fontWeight: 600 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "18px", height: "18px", borderRadius: "50%", background: "rgba(14, 114, 105, 0.08)", border: "1px solid rgba(14, 114, 105, 0.25)", fontSize: "10px", fontWeight: 800, color: "#0e7269" }}>V</span> Uyga vazifa
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#475569", fontWeight: 600 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "18px", height: "18px", borderRadius: "50%", background: "rgba(14, 114, 105, 0.08)", border: "1px solid rgba(14, 114, 105, 0.25)", fontSize: "10px", fontWeight: 800, color: "#0e7269" }}>O</span> Odob-axloq
+            </span>
+          </div>
 
-            {/* Right side: JAMI formula badge */}
+          {/* Right Column: Formula Badge only */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+            {/* JAMI formula badge */}
             <div
               style={{
                 display: "inline-flex",
@@ -2913,17 +2954,6 @@ function ClassReport({
                 ? "Fan bali = natija / 10 · JAMI ball = Imtihon + Intizom"
                 : "JAMI ball = (Ingliz + Matematika) / 2 + 3-fan + Intizom"}
             </div>
-          </div>
-          <div
-            style={{
-              fontSize: "9.5px",
-              color: "#94a3b8",
-              fontWeight: 600,
-              marginTop: "10px",
-              textAlign: "right",
-            }}
-          >
-            Al-Xorazmiy School · {activeClass} sinf · {date}
           </div>
         </div>
       </div>
