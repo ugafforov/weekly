@@ -2131,11 +2131,18 @@ function ClassReport({
   const headerMains: string[] = [];
   subjectLabels.forEach((l, i) => {
     headerMains.push(l);
-    if (i === midAfter - 1) headerMains.push(midLabel);
+    if (i === midAfter - 1) {
+      if (is911) {
+        headerMains.push("JAMI NATIJA");
+        headerMains.push("NATIJA UCHUN BERILGAN BAL");
+      } else {
+        headerMains.push(midLabel);
+      }
+    }
   });
 
   const GRID_COLS = is911
-    ? "46px 386px 190px 190px 150px 88px 130px 98px"
+    ? "46px 374px 170px 170px 110px 80px 80px 130px 98px"
     : "46px 386px 190px 190px 88px 150px 130px 98px";
 
   /* ── Inline style constants ── */
@@ -2424,9 +2431,16 @@ function ClassReport({
               O'QUVCHI
             </div>
             {headerMains.map((l, idx) => {
-              const isMid = l === midLabel;
+              const isMid = is911
+                ? l === "JAMI NATIJA" || l === "NATIJA UCHUN BERILGAN BAL"
+                : l === midLabel;
               let subIdx = idx;
-              if (idx > midAfter - 1) subIdx = idx - 1;
+              if (is911) {
+                // For 9-11, the mid columns are placed at the end of the subjects loop,
+                // so no index shifting is needed since there are no subjects after them.
+              } else {
+                if (idx > midAfter - 1) subIdx = idx - 1;
+              }
               const subj = isMid ? null : students[0]?.subjects[subIdx];
               const totalQ =
                 subj?.totalQuestions ?? (is911 ? (subIdx === 2 ? 10 : 15) : subIdx === 2 ? 10 : 15);
@@ -2833,29 +2847,78 @@ function ClassReport({
                         />,
                       );
                       if (si === midAfter - 1) {
-                        /* O'rtacha bal */
-                        cells.push(
-                          <div
-                            key={`${i}-mid`}
-                            style={{
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              padding: "4px 6px",
-                              borderRight: "1px solid rgba(203, 213, 225, 0.45)",
-                            }}
-                          >
-                            <span
+                        if (is911) {
+                          /* Jami Natija */
+                          cells.push(
+                            <div
+                              key={`${i}-jami-natija`}
                               style={{
-                                fontSize: "14px",
-                                fontWeight: 800,
-                                color: absent ? "#94a3b8" : "#334155",
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                padding: "4px 6px",
+                                borderRight: "1px solid rgba(203, 213, 225, 0.45)",
                               }}
                             >
-                              {s.midScore}
-                            </span>
-                          </div>,
-                        );
+                              <span
+                                style={{
+                                  fontSize: "14px",
+                                  fontWeight: 800,
+                                  color: absent ? "#94a3b8" : "#334155",
+                                }}
+                              >
+                                {s.jamiNatija ?? "0"}
+                              </span>
+                            </div>,
+                          );
+                          /* Natija uchun berilgan bal */
+                          cells.push(
+                            <div
+                              key={`${i}-bal`}
+                              style={{
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                padding: "4px 6px",
+                                borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "14px",
+                                  fontWeight: 800,
+                                  color: absent ? "#94a3b8" : "#334155",
+                                }}
+                              >
+                                {s.midScore}
+                              </span>
+                            </div>,
+                          );
+                        } else {
+                          /* O'rtacha bal */
+                          cells.push(
+                            <div
+                              key={`${i}-mid`}
+                              style={{
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                padding: "4px 6px",
+                                borderRight: "1px solid rgba(203, 213, 225, 0.45)",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "14px",
+                                  fontWeight: 800,
+                                  color: absent ? "#94a3b8" : "#334155",
+                                }}
+                              >
+                                {s.midScore}
+                              </span>
+                            </div>,
+                          );
+                        }
                       }
                     });
                     return cells;

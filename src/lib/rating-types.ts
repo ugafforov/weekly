@@ -59,6 +59,7 @@ export interface NormalizedStudent {
   /** Mid column shown between subjects: 5-8 → "O'RTACHA BAL", 9-11 → "BAL". */
   midScore: string;
   midLabel: string;
+  jamiNatija?: string;
   discipline: DisciplineMark[];
   /** Sum of discipline points (empty cells count as 0). */
   disciplineTotal: number;

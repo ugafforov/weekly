@@ -436,6 +436,7 @@ function buildStudent(
     summary,
     midScore,
     midLabel,
+    jamiNatija: layout.kind === "9-11" && layout.jamiCol !== undefined ? fmt(cellAt(sheet, row, layout.jamiCol)) || "0" : undefined,
     discipline,
     disciplineTotal,
     examScore,
