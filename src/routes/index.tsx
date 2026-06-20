@@ -1695,16 +1695,21 @@ function SubjectCell({
           boxSizing: "border-box",
         }}
       >
-        <span style={{ fontSize: "15px", fontWeight: 700, color: "#94a3b8" }}>—</span>
+        <span style={{ fontSize: "14px", fontWeight: 700, color: "#94a3b8" }}>—</span>
         <span
           style={{
-            fontSize: "10px",
-            fontWeight: 600,
-            color: "rgba(148, 163, 184, 0.85)",
-            marginTop: "1px",
+            fontSize: "9px",
+            fontWeight: 700,
+            color: "#ef4444",
+            background: "rgba(254, 242, 242, 0.85)",
+            border: "1px solid #fee2e2",
+            borderRadius: "4px",
+            padding: "1px 5px",
+            marginTop: "1.5px",
+            letterSpacing: "0.01em",
           }}
         >
-          kirmagan
+          kelmagan
         </span>
       </div>
     );
@@ -2650,23 +2655,6 @@ function ClassReport({
                         </span>
                       )}
                     </div>
-                    {absent && (
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 800,
-                          color: "#ef4444",
-                          background: "rgba(254, 242, 242, 0.85)",
-                          border: "1px solid #fecaca",
-                          borderRadius: "5px",
-                          padding: "1.5px 7px",
-                          alignSelf: "flex-start",
-                          boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.6)",
-                        }}
-                      >
-                        KELMAGAN
-                      </span>
-                    )}
                   </div>
 
                   {/* ── Subjects + mid inserted ── */}
