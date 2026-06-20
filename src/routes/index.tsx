@@ -2184,49 +2184,7 @@ function ClassReport({
           </div>
         </div>
 
-        {/* ── Summary Stats ── */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-around",
-            alignItems: "center",
-            padding: "20px 28px",
-            borderBottom: "1px solid rgba(226, 232, 240, 0.7)",
-            background: "rgba(250, 250, 250, 0.45)",
-            gap: "20px",
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
-              O'RTACHA BALL
-            </div>
-            <div style={{ fontSize: "32px", fontWeight: 800, color: "#0f172a", lineHeight: 1 }}>
-              {students.length > 0 
-                ? (students.reduce((acc, s) => acc + (s.status !== "absent" ? s.total : 0), 0) / 
-                   students.filter(s => s.status !== "absent").length).toFixed(1)
-                : "0"}
-            </div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
-              O'TGANLAR
-            </div>
-            <div style={{ fontSize: "32px", fontWeight: 800, color: "#166534", lineHeight: 1 }}>
-              {students.filter(s => s.status !== "absent" && s.total >= passThreshold).length}
-              <span style={{ fontSize: "16px", color: "#64748b", fontWeight: 600 }}>
-                /{students.filter(s => s.status !== "absent").length}
-              </span>
-            </div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
-              O'TMAGANLAR
-            </div>
-            <div style={{ fontSize: "32px", fontWeight: 800, color: "#dc2626", lineHeight: 1 }}>
-              {students.filter(s => s.status !== "absent" && s.total < passThreshold).length}
-            </div>
-          </div>
-        </div>
+
 
         {/* ── Legend ── */}
         <div
