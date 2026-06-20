@@ -3014,7 +3014,7 @@ function ClassReport({
               }}
             >
               {is911
-                ? "Fan bali = natija / 10 · JAMI ball = Imtihon + Intizom"
+                ? "Natija uchun bal = Natija / 10 • Jami = Natija uchun bal + Intizom"
                 : "JAMI ball = (Ingliz + Matematika) / 2 + 3-fan + Intizom"}
             </div>
           </div>
