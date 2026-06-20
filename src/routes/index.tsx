@@ -19,6 +19,10 @@ import {
   Check,
   Filter,
   CheckSquare,
+  Calculator,
+  Globe,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -887,13 +891,15 @@ function RatingDashboard() {
           ) : activeClass === "red" ? (
             <RedZoneReport ref={reportRef} date={workbook.date} students={workbook.students} />
           ) : (
-            <ClassReport
-              ref={reportRef}
-              date={workbook.date}
-              activeClass={activeClass}
-              students={students}
-              thirdSubject={thirdSubject}
-            />
+            <div className="overflow-x-auto">
+              <ClassReport
+                ref={reportRef}
+                date={workbook.date}
+                activeClass={activeClass}
+                students={students}
+                thirdSubject={thirdSubject}
+              />
+            </div>
           )}
         </div>
       </main>
@@ -1197,15 +1203,19 @@ function RedZoneTable({
           key={`g-${r.group}-${i}`}
           style={{
             gridColumn: "1 / -1",
-            background: "#334155",
+            background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
             color: "#ffffff",
             fontWeight: 800,
-            fontSize: "12px",
+            fontSize: "13px",
             letterSpacing: "0.06em",
-            padding: "8px 14px",
-            borderTop: "1px solid #1e293b",
+            padding: "10px 16px",
+            borderTop: "1px solid #991b1b",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
           }}
         >
+          <span style={{ fontSize: "16px" }}>⚠️</span>
           {r.group}
         </div>,
       );
@@ -1252,10 +1262,13 @@ function RedZoneTable({
         style={{
           ...cell,
           justifyContent: "center",
-          background: zebra,
+          background: "rgba(239, 68, 68, 0.1)",
           fontWeight: 800,
-          color: "#b91c1c",
+          color: "#dc2626",
           borderRight: "none",
+          borderRadius: "4px",
+          padding: "6px 8px",
+          margin: "2px",
         }}
       >
         {r.natija}
@@ -1268,14 +1281,18 @@ function RedZoneTable({
       {/* Title bar */}
       <div
         style={{
-          background: "#1e293b",
+          background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
           color: "#ffffff",
           fontWeight: 800,
-          fontSize: "14px",
+          fontSize: "15px",
           letterSpacing: "0.02em",
-          padding: "12px 16px",
+          padding: "14px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
         }}
       >
+        <span style={{ fontSize: "20px" }}>🔴</span>
         {title}
       </div>
       {/* Column headers */}
@@ -1535,22 +1552,22 @@ function Leaderboard({ students }: { students: NormalizedStudent[] }) {
 /* JAMI cell — gradient colour by standing. */
 const TOTAL_COLOR: Record<Tone, { bg: string; fg: string; border: string }> = {
   high: {
-    bg: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    bg: "linear-gradient(135deg, #10b981 0%, #047857 100%)",
     fg: "#ffffff",
-    border: "#047857",
+    border: "#065f46",
   },
   mid: {
-    bg: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+    bg: "linear-gradient(135deg, #fbbf24 0%, #d97706 100%)",
     fg: "#ffffff",
-    border: "#b45309",
+    border: "#92400e",
   },
   low: {
-    bg: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+    bg: "linear-gradient(135deg, #f43f5e 0%, #be123c 100%)",
     fg: "#ffffff",
-    border: "#b91c1c",
+    border: "#9f1239",
   },
   none: {
-    bg: "linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)",
+    bg: "linear-gradient(135deg, #e2e8f0 0%, #64748b 100%)",
     fg: "#ffffff",
     border: "#475569",
   },
@@ -1565,6 +1582,50 @@ const cellCenter: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+/* ─── Helper for color-coded visualization based on percentage ─── */
+function getPercentColor(percent: number | null): { bg: string; text: string; border: string } {
+  if (percent === null) {
+    return { bg: "rgba(241, 245, 249, 0.5)", text: "#94a3b8", border: "rgba(203, 213, 225, 0.5)" };
+  }
+  if (percent >= 70) {
+    return { 
+      bg: "rgba(34, 197, 94, 0.1)", 
+      text: "#166534", 
+      border: "rgba(34, 197, 94, 0.3)" 
+    };
+  }
+  if (percent >= 50) {
+    return { 
+      bg: "rgba(234, 179, 8, 0.1)", 
+      text: "#854d0e", 
+      border: "rgba(234, 179, 8, 0.3)" 
+    };
+  }
+  return { 
+    bg: "rgba(239, 68, 68, 0.1)", 
+    text: "#991b1b", 
+    border: "rgba(239, 68, 68, 0.3)" 
+  };
+}
+
+/* ─── Helper for subject icons ─── */
+function getSubjectIcon(label: string): React.ReactNode {
+  const upper = label.toUpperCase();
+  if (upper.includes("MATEMATIKA") || upper.includes("MATEM")) {
+    return <Calculator size={14} />;
+  }
+  if (upper.includes("INGLIZ")) {
+    return <Globe size={14} />;
+  }
+  if (upper.includes("ONA") || upper.includes("TILI")) {
+    return <BookOpen size={14} />;
+  }
+  if (upper.includes("3-FAN") || upper.includes("3-BLOK")) {
+    return <GraduationCap size={14} />;
+  }
+  return null;
+}
+
 /* ─── Subject cell — card-row layout ──────────────────────────── */
 function SubjectCell({
   subject,
@@ -1576,6 +1637,10 @@ function SubjectCell({
   isThird?: boolean;
 }) {
   const t = TONE[subject.tone];
+  
+  // Calculate percentage for color coding
+  const percent = subject.percent ?? (subject.correct !== null ? (subject.correct / subject.totalQuestions) * 100 : null);
+  const colorInfo = getPercentColor(percent);
 
   if (subject.idError) {
     return (
@@ -1655,9 +1720,9 @@ function SubjectCell({
   const showLevelCol = !is911 && !isThird;
 
   const gridColsSubject = showFanCol
-    ? "1.5fr 1fr 1fr 1fr"
+    ? "1fr 1fr 1fr 1fr"
     : showLevelCol
-      ? "1.2fr 1fr 1fr 1fr"
+      ? "1fr 1fr 1fr 1fr"
       : "1fr 1fr 1fr";
 
   return (
@@ -1683,8 +1748,8 @@ function SubjectCell({
             padding: "0 4px",
           }}
         >
-          <div style={{ fontSize: "12px", fontWeight: 700, color: "#475569" }}>
-            {subject.level ? `${subject.level}-etap` : "—"}
+          <div style={{ fontSize: "13px", fontWeight: 700, color: "#475569" }}>
+            {subject.level || "—"}
           </div>
         </div>
       )}
@@ -1723,7 +1788,7 @@ function SubjectCell({
         {subject.correct !== null ? subject.correct : "—"}
       </div>
 
-      {/* 3) Foizi */}
+      {/* 3) Foizi - with color coding */}
       <div
         style={{
           display: "flex",
@@ -1732,7 +1797,9 @@ function SubjectCell({
           borderRight: "1px solid rgba(203, 213, 225, 0.35)",
           fontSize: "13px",
           fontWeight: 700,
-          color: "#0f172a",
+          color: colorInfo.text,
+          background: colorInfo.bg,
+          padding: "0 4px",
         }}
       >
         {subject.correct !== null ? percentText : "—"}
@@ -1785,44 +1852,34 @@ function DisciplineCell({ discipline }: { discipline: NormalizedStudent["discipl
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: "7px",
-        padding: "6px 8px",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr 1fr",
+        alignItems: "stretch",
         borderRight: "1px solid rgba(203, 213, 225, 0.45)",
         height: "100%",
         boxSizing: "border-box",
       }}
     >
-      {discipline.map((d) => {
+      {discipline.map((d, idx) => {
         const colors = getDiscColor(d.value, d.empty);
         return (
-          <span
+          <div
             key={d.short}
             title={`${d.label}: ${d.value}`}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
+              display: "flex",
               justifyContent: "center",
-              width: "22px",
-              height: "22px",
-              borderRadius: "50%",
-              fontSize: "11px",
-              fontWeight: 800,
-              background: d.empty
-                ? "rgba(241, 245, 249, 0.45)"
-                : `linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 60%), ${colors.bg}`,
-              border: `1px solid ${d.empty ? "rgba(221, 229, 238, 0.6)" : colors.border}`,
-              color: d.empty ? "rgba(203, 213, 225, 0.8)" : colors.fg,
-              boxShadow: d.empty
-                ? "none"
-                : "inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 1px 3px rgba(0, 0, 0, 0.04)",
+              alignItems: "center",
+              borderRight: idx === 3 ? "none" : "1px solid rgba(203, 213, 225, 0.35)",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: d.empty ? "rgba(148, 163, 184, 0.8)" : colors.fg,
+              background: d.empty ? "transparent" : colors.bg,
+              height: "100%",
             }}
           >
-            {d.empty ? "" : d.value}
-          </span>
+            {d.empty ? "—" : d.value}
+          </div>
         );
       })}
     </div>
@@ -1874,6 +1931,7 @@ function ClassReport({
   const is911 = kind === "9-11";
   const midLabel = students[0]?.midLabel ?? "O'RTACHA BAL";
   const midAfter = is911 ? 3 : 2;
+  const passThreshold = is911 ? 50 : 12;
 
   const subjectLabels = (students[0]?.subjects ?? []).map((sub) =>
     thirdSubject && /3-fan/i.test(sub.label) ? thirdSubject.toLocaleUpperCase("uz-UZ") : sub.label,
@@ -1893,8 +1951,8 @@ function ClassReport({
 
   /* Column widths: №  Name  Sub1  Sub2  Mid  Sub3/3-fan  INTIZOM  JAMI */
   const GRID_COLS = is911
-    ? "46px 310px 200px 200px 200px 100px 130px 90px"
-    : "46px 310px 200px 200px 100px 200px 130px 90px";
+    ? "46px 390px 180px 180px 180px 88px 130px 84px"
+    : "46px 386px 190px 190px 88px 150px 130px 98px";
 
   /* ── Inline style constants ── */
   const hdrCell: React.CSSProperties = {
@@ -1905,7 +1963,7 @@ function ClassReport({
     fontWeight: 900,
     color: "#ffffff",
     letterSpacing: "0.05em",
-    padding: "12px 8px",
+    padding: "8px 6px",
     textAlign: "center",
     borderRight: "1px solid rgba(255, 255, 255, 0.12)",
     boxSizing: "border-box",
@@ -1923,7 +1981,6 @@ function ClassReport({
         boxSizing: "border-box",
         margin: "0 auto",
         position: "relative",
-        overflow: "hidden",
       }}
     >
       {/* Background blobs for glassmorphic depth */}
@@ -2127,11 +2184,55 @@ function ClassReport({
           </div>
         </div>
 
+        {/* ── Summary Stats ── */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            padding: "20px 28px",
+            borderBottom: "1px solid rgba(226, 232, 240, 0.7)",
+            background: "rgba(250, 250, 250, 0.45)",
+            gap: "20px",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+              O'RTACHA BALL
+            </div>
+            <div style={{ fontSize: "32px", fontWeight: 800, color: "#0f172a", lineHeight: 1 }}>
+              {students.length > 0 
+                ? (students.reduce((acc, s) => acc + (s.status !== "absent" ? s.total : 0), 0) / 
+                   students.filter(s => s.status !== "absent").length).toFixed(1)
+                : "0"}
+            </div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+              O'TGANLAR
+            </div>
+            <div style={{ fontSize: "32px", fontWeight: 800, color: "#166534", lineHeight: 1 }}>
+              {students.filter(s => s.status !== "absent" && s.total >= passThreshold).length}
+              <span style={{ fontSize: "16px", color: "#64748b", fontWeight: 600 }}>
+                /{students.filter(s => s.status !== "absent").length}
+              </span>
+            </div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px" }}>
+              O'TMAGANLAR
+            </div>
+            <div style={{ fontSize: "32px", fontWeight: 800, color: "#dc2626", lineHeight: 1 }}>
+              {students.filter(s => s.status !== "absent" && s.total < passThreshold).length}
+            </div>
+          </div>
+        </div>
+
         {/* ── Legend ── */}
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
             gap: "28px",
             flexWrap: "wrap",
             padding: "16px 28px",
@@ -2142,40 +2243,80 @@ function ClassReport({
             background: "rgba(250, 250, 250, 0.45)",
           }}
         >
-          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                width: "44px",
-                height: "22px",
-                borderRadius: "6px",
-                background: "rgba(254, 243, 199, 0.75)",
-                border: "1.5px solid #fde68a",
-                display: "inline-block",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-              }}
-            />
-            <span>
-              O'quvchi ID raqamini{" "}
-              <strong style={{ color: "#b45309", fontWeight: 800 }}>xato</strong> kiritgan
+          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "3px",
+                  background: "rgba(34, 197, 94, 0.3)",
+                  border: "1.5px solid rgba(34, 197, 94, 0.5)",
+                }}
+              />
+              <span>70%+ yaxshi</span>
             </span>
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                width: "44px",
-                height: "22px",
-                borderRadius: "6px",
-                background: "rgba(241, 245, 249, 0.7)",
-                border: "1.5px solid #cbd5e1",
-                display: "inline-block",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-              }}
-            />
-            <span>
-              O'quvchi imtihonda{" "}
-              <strong style={{ color: "#475569", fontWeight: 800 }}>qatnashmagan</strong>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "3px",
+                  background: "rgba(234, 179, 8, 0.3)",
+                  border: "1.5px solid rgba(234, 179, 8, 0.5)",
+                }}
+              />
+              <span>50-69% o'rtacha</span>
             </span>
-          </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "3px",
+                  background: "rgba(239, 68, 68, 0.3)",
+                  border: "1.5px solid rgba(239, 68, 68, 0.5)",
+                }}
+              />
+              <span>50% dan past</span>
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span
+                style={{
+                  width: "44px",
+                  height: "22px",
+                  borderRadius: "6px",
+                  background: "rgba(254, 243, 199, 0.75)",
+                  border: "1.5px solid #fde68a",
+                  display: "inline-block",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+                }}
+              />
+              <span>
+                O'quvchi ID raqamini{" "}
+                <strong style={{ color: "#dc2626", fontWeight: 800 }}>xato</strong> kiritgan
+              </span>
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span
+                style={{
+                  width: "44px",
+                  height: "22px",
+                  borderRadius: "6px",
+                  background: "rgba(241, 245, 249, 0.7)",
+                  border: "1.5px solid #cbd5e1",
+                  display: "inline-block",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+                }}
+              />
+              <span>
+                O'quvchi imtihonda{" "}
+                <strong style={{ color: "#475569", fontWeight: 800 }}>qatnashmagan</strong>
+              </span>
+            </span>
+          </div>
         </div>
 
         {/* ── Table area ── */}
@@ -2206,9 +2347,9 @@ function ClassReport({
               const showLevelCol = !is911 && !isMid && subIdx !== 2;
 
               const gridColsSubject = showFanCol
-                ? "1.5fr 1fr 1fr 1fr"
+                ? "1fr 1fr 1fr 1fr"
                 : showLevelCol
-                  ? "1.2fr 1fr 1fr 1fr"
+                  ? "1fr 1fr 1fr 1fr"
                   : "1fr 1fr 1fr";
 
               return (
@@ -2232,7 +2373,7 @@ function ClassReport({
                     <>
                       <div
                         style={{
-                          padding: "6px 0",
+                          padding: "4px 0",
                           borderBottom: "1px solid rgba(255,255,255,0.12)",
                           width: "100%",
                           display: "flex",
@@ -2241,7 +2382,9 @@ function ClassReport({
                           gap: "2px",
                         }}
                       >
-                        <span style={{ fontSize: "11px", letterSpacing: "0.02em" }}>{l}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <span style={{ fontSize: "11px", letterSpacing: "0.02em" }}>{l}</span>
+                        </div>
                         <span
                           style={{
                             fontSize: "9px",
@@ -2267,13 +2410,14 @@ function ClassReport({
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "8.5px",
+                              fontSize: "9.5px",
                               fontWeight: 800,
                               color: "rgba(255,255,255,0.8)",
                               borderRight: "1px solid rgba(255,255,255,0.12)",
+                              padding: "5px 0",
                             }}
                           >
-                            BOSQICH
+                            LEVEL
                           </div>
                         )}
                         {showFanCol && (
@@ -2282,10 +2426,11 @@ function ClassReport({
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "8.5px",
+                              fontSize: "9.5px",
                               fontWeight: 800,
                               color: "rgba(255,255,255,0.8)",
                               borderRight: "1px solid rgba(255,255,255,0.12)",
+                              padding: "5px 0",
                             }}
                           >
                             FAN
@@ -2297,9 +2442,10 @@ function ClassReport({
                             alignItems: "center",
                             justifyContent: "center",
                             borderRight: "1px solid rgba(255,255,255,0.12)",
-                            fontSize: "8.5px",
+                            fontSize: "9.5px",
                             fontWeight: 800,
                             color: "rgba(255,255,255,0.8)",
+                            padding: "5px 0",
                           }}
                         >
                           TO'G'RI
@@ -2310,9 +2456,10 @@ function ClassReport({
                             alignItems: "center",
                             justifyContent: "center",
                             borderRight: "1px solid rgba(255,255,255,0.12)",
-                            fontSize: "8.5px",
+                            fontSize: "9.5px",
                             fontWeight: 800,
                             color: "rgba(255,255,255,0.8)",
+                            padding: "5px 0",
                           }}
                         >
                           FOIZI
@@ -2322,9 +2469,10 @@ function ClassReport({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "8.5px",
+                            fontSize: "9.5px",
                             fontWeight: 800,
                             color: "rgba(255,255,255,0.8)",
+                            padding: "5px 0",
                           }}
                         >
                           BALI
@@ -2335,50 +2483,68 @@ function ClassReport({
                 </div>
               );
             })}
-            {/* INTIZOM header: title + D K V O circles */}
+            {/* INTIZOM header: title + D K V O sub-columns */}
             <div
               style={{
                 ...hdrCell,
                 flexDirection: "column",
-                gap: "6px",
-                padding: "10px 4px",
-                lineHeight: 1.15,
+                padding: "0",
+                gap: 0,
               }}
             >
-              <span style={{ fontSize: "14px", fontWeight: 900 }}>INTIZOM</span>
               <div
                 style={{
+                  padding: "4px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.12)",
+                  width: "100%",
                   display: "flex",
-                  flexDirection: "row",
-                  gap: "7px",
-                  justifyContent: "center",
+                  flexDirection: "column",
                   alignItems: "center",
+                  gap: "2px",
                 }}
               >
-                {["D", "K", "V", "O"].map((letter) => (
-                  <span
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "11px", letterSpacing: "0.02em" }}>INTIZOM</span>
+                </div>
+                <span
+                  style={{
+                    fontSize: "9px",
+                    color: "rgba(255,255,255,0.7)",
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  4 ta mezon
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  width: "100%",
+                  flex: 1,
+                }}
+              >
+                {["D", "K", "V", "O"].map((letter, lIdx) => (
+                  <div
                     key={letter}
                     style={{
-                      display: "inline-flex",
+                      display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: "22px",
-                      height: "22px",
-                      borderRadius: "50%",
-                      fontSize: "11px",
+                      fontSize: "9.5px",
                       fontWeight: 800,
-                      color: "#ffffff",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      border: "1px solid rgba(255, 255, 255, 0.35)",
-                      boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.2)",
+                      color: "rgba(255,255,255,0.8)",
+                      borderRight: lIdx === 3 ? "none" : "1px solid rgba(255, 255, 255, 0.12)",
+                      padding: "5px 0",
                     }}
                   >
                     {letter}
-                  </span>
+                  </div>
                 ))}
               </div>
             </div>
-            <div style={{ ...hdrCell, borderRight: "none" }}>JAMI</div>
+            <div style={{ ...hdrCell, borderRight: "none", padding: "8px 6px" }}>JAMI</div>
           </div>
 
           {/* Table body — unified table rows */}
@@ -2434,7 +2600,7 @@ function ClassReport({
                       : i % 2 === 0
                         ? "rgba(255, 255, 255, 0.74)"
                         : "rgba(248, 250, 252, 0.5)",
-                    height: is911 ? "70px" : "64px",
+                    minHeight: is911 ? "42px" : "38px",
                   }}
                 >
                   {/* ── Rank ── */}
@@ -2443,7 +2609,7 @@ function ClassReport({
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
-                      padding: "6px 4px",
+                      padding: "4px 2px",
                       borderRight: "1px solid rgba(203, 213, 225, 0.45)",
                     }}
                   >
@@ -2480,8 +2646,8 @@ function ClassReport({
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "center",
-                      padding: "6px 18px",
-                      gap: "3px",
+                      padding: "4px 12px",
+                      gap: "2px",
                       borderRight: "1px solid rgba(203, 213, 225, 0.45)",
                     }}
                   >
@@ -2490,7 +2656,7 @@ function ClassReport({
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        flexWrap: "nowrap",
+                        flexWrap: "wrap",
                       }}
                     >
                       <span
@@ -2561,13 +2727,13 @@ function ClassReport({
                               display: "flex",
                               justifyContent: "center",
                               alignItems: "center",
-                              padding: "6px 8px",
+                              padding: "4px 6px",
                               borderRight: "1px solid rgba(203, 213, 225, 0.45)",
                             }}
                           >
                             <span
                               style={{
-                                fontSize: "18px",
+                                fontSize: "14px",
                                 fontWeight: 800,
                                 color: absent ? "#94a3b8" : "#334155",
                               }}
@@ -2590,18 +2756,23 @@ function ClassReport({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      textAlign: "center",
                       background: `linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 45%), ${tc.bg}`,
                       boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.28)",
                       height: "100%",
                       width: "100%",
+                      padding: "0",
+                      boxSizing: "border-box",
                     }}
                   >
                     <span
                       style={{
-                        fontSize: "19px",
+                        display: "block",
+                        fontSize: "14px",
                         fontWeight: 900,
                         color: "#ffffff",
                         textShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
+                        textAlign: "center",
                       }}
                     >
                       {s.totalText}
