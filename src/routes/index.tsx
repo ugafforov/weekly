@@ -2043,82 +2043,51 @@ function ClassReport({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "32px 40px",
-            background: "linear-gradient(135deg, #064e3b 0%, #0e7269 50%, #115e59 100%)",
+            padding: "28px 36px",
+            background: "#0e7269", // Clean solid brand color
             color: "#ffffff",
             borderRadius: "22px 22px 0 0",
             flexWrap: "nowrap",
             position: "relative",
-            overflow: "hidden",
           }}
         >
-          {/* Decorative background glow blobs */}
-          <div
-            style={{
-              position: "absolute",
-              top: "-80px",
-              right: "-50px",
-              width: "280px",
-              height: "280px",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(246, 217, 138, 0.12) 0%, rgba(246, 217, 138, 0) 70%)",
-              pointerEvents: "none",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              bottom: "-100px",
-              left: "10%",
-              width: "350px",
-              height: "350px",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(20, 184, 166, 0.15) 0%, rgba(20, 184, 166, 0) 70%)",
-              pointerEvents: "none",
-            }}
-          />
-
           {/* Left cluster: logo · divider · titles */}
-          <div style={{ display: "flex", alignItems: "center", minWidth: 0, position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                height: "64px",
-                width: "64px",
-                borderRadius: "18px",
-                background: "rgba(255, 255, 255, 0.95)",
-                boxShadow: "0 10px 25px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.2)",
+                height: "56px",
+                width: "56px",
+                borderRadius: "12px",
+                background: "#ffffff",
                 flexShrink: 0,
               }}
             >
               <img
                 src={logo}
                 alt="Al-Xorazmiy"
-                style={{ height: "48px", width: "48px", objectFit: "contain" }}
+                style={{ height: "42px", width: "42px", objectFit: "contain" }}
               />
             </div>
             <div
               style={{
                 width: "1px",
-                height: "52px",
-                background: "linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0) 100%)",
-                margin: "0 28px",
+                height: "40px",
+                background: "rgba(255, 255, 255, 0.15)",
+                margin: "0 24px",
                 flexShrink: 0,
               }}
             />
             <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", lineHeight: 1 }}>
                 <span
                   style={{
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    letterSpacing: "0.22em",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.2em",
                     color: "#f6d98a",
-                    background: "rgba(246, 217, 138, 0.12)",
-                    padding: "3px 10px",
-                    borderRadius: "6px",
                     textTransform: "uppercase",
                   }}
                 >
@@ -2126,8 +2095,17 @@ function ClassReport({
                 </span>
                 <span
                   style={{
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "50%",
+                    background: "rgba(255, 255, 255, 0.3)",
+                    display: "inline-block",
+                  }}
+                />
+                <span
+                  style={{
                     fontSize: "10px",
-                    fontWeight: 600,
+                    fontWeight: 500,
                     letterSpacing: "0.1em",
                     color: "rgba(255, 255, 255, 0.6)",
                     textTransform: "uppercase",
@@ -2138,15 +2116,12 @@ function ClassReport({
               </div>
               <div
                 style={{
-                  fontSize: "28px",
-                  fontWeight: 800,
-                  lineHeight: 1.15,
-                  letterSpacing: "-0.01em",
-                  marginTop: "8px",
+                  fontSize: "24px",
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  marginTop: "6px",
                   whiteSpace: "nowrap",
-                  background: "linear-gradient(to right, #ffffff, #e2f1f0)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  color: "#ffffff",
                 }}
               >
                 HAFTALIK JAMG'ARILGAN BALLAR
@@ -2154,16 +2129,16 @@ function ClassReport({
               <div
                 style={{
                   fontSize: "12px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  color: "rgba(255, 255, 255, 0.65)",
-                  marginTop: "8px",
+                  fontWeight: 500,
+                  letterSpacing: "0.05em",
+                  color: "rgba(255, 255, 255, 0.6)",
+                  marginTop: "6px",
                   display: "flex",
                   alignItems: "center",
                   gap: "6px"
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -2174,48 +2149,47 @@ function ClassReport({
             </div>
           </div>
 
-          {/* Right: class frosted glass badge */}
+          {/* Right: class text (minimal, clean alignment) */}
           <div
             style={{
-              position: "relative",
-              zIndex: 1,
               display: "flex",
-              alignItems: "center",
-              gap: "14px",
-              background: "rgba(255, 255, 255, 0.08)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              padding: "12px 24px",
-              borderRadius: "16px",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08)",
+              flexDirection: "column",
+              alignItems: "flex-end",
               flexShrink: 0,
+              paddingLeft: "24px",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-              <span
-                style={{
-                  fontSize: "36px",
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  letterSpacing: "-0.02em",
-                  color: "#ffffff",
-                }}
-              >
-                {activeClass}
-              </span>
-              <span
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 800,
-                  letterSpacing: "0.25em",
-                  color: "#f6d98a",
-                  marginTop: "2px",
-                  textTransform: "uppercase"
-                }}
-              >
-                SINF
-              </span>
-            </div>
+            <span
+              style={{
+                fontSize: "42px",
+                fontWeight: 800,
+                lineHeight: 0.9,
+                letterSpacing: "-0.01em",
+                color: "#ffffff",
+              }}
+            >
+              {activeClass}
+            </span>
+            <span
+              style={{
+                display: "block",
+                width: "36px",
+                height: "2px",
+                background: "#f6d98a",
+                margin: "6px 0",
+              }}
+            />
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.2em",
+                color: "rgba(255, 255, 255, 0.7)",
+                textTransform: "uppercase",
+              }}
+            >
+              SINF
+            </span>
           </div>
         </div>
 
