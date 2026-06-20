@@ -2041,246 +2041,240 @@ function ClassReport({
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: "28px 36px",
-            background: "#0e7269", // Clean solid brand color
-            color: "#ffffff",
+            padding: "36px 40px 24px",
+            background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+            borderBottom: "1px solid rgba(226, 232, 240, 0.8)",
             borderRadius: "22px 22px 0 0",
-            flexWrap: "nowrap",
             position: "relative",
           }}
         >
-          {/* Left cluster: logo · divider · titles */}
-          <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "56px",
-                width: "56px",
-                borderRadius: "12px",
-                background: "#ffffff",
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={logo}
-                alt="Al-Xorazmiy"
-                style={{ height: "42px", width: "42px", objectFit: "contain" }}
-              />
-            </div>
-            <div
-              style={{
-                width: "1px",
-                height: "40px",
-                background: "rgba(255, 255, 255, 0.15)",
-                margin: "0 24px",
-                flexShrink: 0,
-              }}
-            />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", lineHeight: 1 }}>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    letterSpacing: "0.2em",
-                    color: "#f6d98a",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  AL-XORAZMIY SCHOOL
-                </span>
-                <span
-                  style={{
-                    width: "4px",
-                    height: "4px",
-                    borderRadius: "50%",
-                    background: "rgba(255, 255, 255, 0.3)",
-                    display: "inline-block",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 500,
-                    letterSpacing: "0.1em",
-                    color: "rgba(255, 255, 255, 0.6)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  HAFTALIK REYTING TIZIMI
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: "24px",
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  marginTop: "6px",
-                  whiteSpace: "nowrap",
-                  color: "#ffffff",
-                }}
-              >
-                HAFTALIK JAMG'ARILGAN BALLAR
-              </div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  letterSpacing: "0.05em",
-                  color: "rgba(255, 255, 255, 0.6)",
-                  marginTop: "6px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px"
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                {date}
-              </div>
-            </div>
+          {/* Top brand color line */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "5px",
+            background: "linear-gradient(90deg, #0e7269 0%, #14b8a6 50%, #f59e0b 100%)"
+          }} />
+
+          {/* Centered Logo Badge */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "64px",
+            width: "64px",
+            borderRadius: "50%",
+            background: "#ffffff",
+            boxShadow: "0 8px 20px rgba(14, 114, 105, 0.08), 0 0 0 1px rgba(14, 114, 105, 0.08)",
+            marginBottom: "12px",
+            border: "1.5px solid #0e7269",
+          }}>
+            <img src={logo} alt="Al-Xorazmiy" style={{ height: "42px", width: "42px", objectFit: "contain" }} />
           </div>
 
-          {/* Right: class text (minimal, clean alignment) */}
-          <div
-            style={{
+          {/* Logo Serif Text (Image 1 style) */}
+          <h1 style={{
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: "30px",
+            fontWeight: 800,
+            color: "#0f172a",
+            letterSpacing: "0.06em",
+            lineHeight: 1,
+            margin: 0,
+            textTransform: "uppercase"
+          }}>
+            AL-XORAZMIY
+          </h1>
+          
+          {/* Subtitle "— SCHOOL —" */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            width: "100%",
+            justifyContent: "center",
+            gap: "12px",
+            marginTop: "4px",
+            marginBottom: "20px"
+          }}>
+            <div style={{ width: "32px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
+            <span style={{
+              fontFamily: "var(--font-sans), sans-serif",
+              fontSize: "12px",
+              fontWeight: 800,
+              color: "#0e7269",
+              letterSpacing: "0.45em",
+              textIndent: "0.45em",
+              textTransform: "uppercase"
+            }}>
+              SCHOOL
+            </span>
+            <div style={{ width: "32px", height: "1px", background: "rgba(14, 114, 105, 0.4)" }} />
+          </div>
+
+          {/* Tagline / System Name */}
+          <div style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.18em",
+            color: "#64748b",
+            textTransform: "uppercase",
+            marginBottom: "6px"
+          }}>
+            HAFTALIK REYTING TIZIMI
+          </div>
+
+          {/* Main Title */}
+          <div style={{
+            fontSize: "26px",
+            fontWeight: 800,
+            color: "#0f172a",
+            letterSpacing: "-0.01em",
+            lineHeight: 1.2,
+            textAlign: "center",
+            marginBottom: "18px"
+          }}>
+            HAFTALIK JAMG'ARILGAN BALLAR
+          </div>
+
+          {/* Meta Details: Date and Class */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+          }}>
+            {/* Date */}
+            <div style={{
               display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              flexShrink: 0,
-              paddingLeft: "24px",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "42px",
-                fontWeight: 800,
-                lineHeight: 0.9,
-                letterSpacing: "-0.01em",
-                color: "#ffffff",
-              }}
-            >
-              {activeClass}
-            </span>
-            <span
-              style={{
-                display: "block",
-                width: "36px",
-                height: "2px",
-                background: "#f6d98a",
-                margin: "6px 0",
-              }}
-            />
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.2em",
-                color: "rgba(255, 255, 255, 0.7)",
-                textTransform: "uppercase",
-              }}
-            >
-              SINF
-            </span>
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "#475569",
+              background: "#f1f5f9",
+              padding: "6px 14px",
+              borderRadius: "30px",
+              border: "1px solid #e2e8f0"
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#0e7269" }}>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              {date}
+            </div>
+
+            {/* Class badge */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "14px",
+              fontWeight: 800,
+              color: "#ffffff",
+              background: "linear-gradient(135deg, #0e7269 0%, #0d9488 100%)",
+              padding: "6px 16px",
+              borderRadius: "30px",
+              boxShadow: "0 4px 12px rgba(14, 114, 105, 0.15)"
+            }}>
+              <span>{activeClass}</span>
+              <span style={{ fontSize: "10px", fontWeight: 500, color: "rgba(255, 255, 255, 0.8)", letterSpacing: "0.05em" }}>SINF</span>
+            </div>
           </div>
         </div>
-
-
 
         {/* ── Legend ── */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            gap: "28px",
+            gap: "24px",
             flexWrap: "wrap",
-            padding: "16px 28px",
-            borderBottom: "1px solid rgba(226, 232, 240, 0.7)",
-            fontSize: "12.5px",
-            color: "#334155",
+            padding: "14px 28px",
+            borderBottom: "1px solid #e2e8f0",
+            fontSize: "12px",
+            color: "#475569",
             fontWeight: 600,
-            background: "rgba(250, 250, 250, 0.45)",
+            background: "#f8fafc",
+            alignItems: "center"
           }}
         >
-          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span
                 style={{
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "3px",
-                  background: "rgba(34, 197, 94, 0.3)",
-                  border: "1.5px solid rgba(34, 197, 94, 0.5)",
+                  width: "14px",
+                  height: "14px",
+                  borderRadius: "4px",
+                  background: "rgba(34, 197, 94, 0.15)",
+                  border: "1.5px solid rgba(34, 197, 94, 0.4)",
+                  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
                 }}
               />
-              <span>70%+ yaxshi</span>
+              <span style={{ color: "#166534" }}>70%+ yaxshi</span>
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span
                 style={{
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "3px",
-                  background: "rgba(234, 179, 8, 0.3)",
-                  border: "1.5px solid rgba(234, 179, 8, 0.5)",
+                  width: "14px",
+                  height: "14px",
+                  borderRadius: "4px",
+                  background: "rgba(234, 179, 8, 0.15)",
+                  border: "1.5px solid rgba(234, 179, 8, 0.4)",
+                  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
                 }}
               />
-              <span>50-69% o'rtacha</span>
+              <span style={{ color: "#854d0e" }}>50-69% o'rtacha</span>
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span
                 style={{
-                  width: "12px",
-                  height: "12px",
-                  borderRadius: "3px",
-                  background: "rgba(239, 68, 68, 0.3)",
-                  border: "1.5px solid rgba(239, 68, 68, 0.5)",
+                  width: "14px",
+                  height: "14px",
+                  borderRadius: "4px",
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1.5px solid rgba(239, 68, 68, 0.4)",
+                  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.5)",
                 }}
               />
-              <span>50% dan past</span>
+              <span style={{ color: "#991b1b" }}>50% dan past</span>
             </span>
           </div>
-          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span
                 style={{
-                  width: "44px",
-                  height: "22px",
-                  borderRadius: "6px",
-                  background: "rgba(254, 243, 199, 0.75)",
+                  width: "40px",
+                  height: "20px",
+                  borderRadius: "4px",
+                  background: "rgba(254, 243, 199, 0.6)",
                   border: "1.5px solid #fde68a",
                   display: "inline-block",
                   boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
                 }}
               />
-              <span>
-                O'quvchi ID raqamini{" "}
-                <strong style={{ color: "#dc2626", fontWeight: 800 }}>xato</strong> kiritgan
+              <span style={{ color: "#78350f" }}>
+                ID raqami <strong style={{ color: "#dc2626", fontWeight: 800 }}>xato</strong> kiritilgan
               </span>
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span
                 style={{
-                  width: "44px",
-                  height: "22px",
-                  borderRadius: "6px",
-                  background: "rgba(241, 245, 249, 0.7)",
+                  width: "40px",
+                  height: "20px",
+                  borderRadius: "4px",
+                  background: "rgba(241, 245, 249, 0.6)",
                   border: "1.5px solid #cbd5e1",
                   display: "inline-block",
                   boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
                 }}
               />
-              <span>
-                O'quvchi imtihonda{" "}
-                <strong style={{ color: "#475569", fontWeight: 800 }}>qatnashmagan</strong>
+              <span style={{ color: "#475569" }}>
+                Imtihonda <strong style={{ color: "#475569", fontWeight: 800 }}>qatnashmagan</strong>
               </span>
             </span>
           </div>
